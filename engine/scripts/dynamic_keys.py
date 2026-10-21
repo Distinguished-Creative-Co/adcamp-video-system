@@ -1,0 +1,91 @@
+#!/usr/bin/env python3
+"""Mark key words and generate zoom punches for a "dynamic" caption reel.
+
+    python3 scripts/dynamic_keys.py <name>
+
+KEY WORDS: one per caption line, the line's `big` word if it has one, else its longest word
+that is not a filler word (4+ letters). Written as "key": true on the word, so any choice can
+be edited by hand afterwards (re-running this script overwrites them).
+ZOOMS: after the spoken hook, the camera punches in (1.12) or back out (1.0) on a key word at most
+every 5 seconds, and holds at 1.0 through back-text moments (the words behind the host stay readable).
+"""
+import json
+import os
+import re
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+sys.path.insert(0, HERE)
+import reel_config  # noqa: E402
+
+FPS = 30
+STOP = set('''the and that this with from your have about there their they them then than what when where which
+while would could should into onto just going it's that's there's he's isn't doesn't does don't been were will
+also only even more most some like over very much does after want around going gonna'''.split())
+
+
+def main():
+    name = sys.argv[1]
+    path = reel_config.config_path(name)
+    src = open(path).read()
+    cfg = reel_config.load(name)
+    words = cfg['words']
+    keys = set()
+    for ln in sorted(set(w['line'] for w in words)):
+        idx = [i for i, w in enumerate(words) if w['line'] == ln and w['t']]
+        big = [i for i in idx if words[i].get('big')]
+        if big:
+            keys.add(big[0])
+            continue
+        cand = [i for i in idx if ' ' not in words[i]['t'].strip() and len(re.sub(r'[^A-Za-z]', '', words[i]['t'])) >= 4
+                and re.sub(r"[^a-z']", '', words[i]['t'].lower()) not in STOP]
+        if cand:
+            keys.add(max(cand, key=lambda i: len(re.sub(r'[^A-Za-z]', '', words[i]['t']))))
+    # rewrite the word lines: drop any old key flag, add the new ones (word order is file order)
+    lines = src.split('\n')
+    wi = -1
+    for n, l in enumerate(lines):
+        if l.lstrip().startswith('{"t":'):
+            wi += 1
+            l = l.replace(', "key": true', '')
+            if wi in keys:
+                l = re.sub(r'\}(,?)\s*$', r', "key": true}\1', l)
+            lines[n] = l
+    src = '\n'.join(lines)
+
+    hook_end = round(max(w['e'] for w in words if w['sent'] == 0) * FPS) + 2
+    bts = [(b['in'], b['out']) for b in cfg.get('backText') or []]
+    in_bt = lambda f: any(a - 6 <= f <= b + 2 for a, b in bts)  # noqa: E731
+    # CALM PUNCHES (Chris, 2026-10-02: "way too much zoom in and out"): the camera changes state at
+    # most every GAP frames, on a key word, alternating in (1.12) and back out (1.0). Back text holds
+    # at 1.0 so the words behind the host stay readable.
+    GAP = 150
+    out, state, last = [], 1.0, -10 ** 9
+    for i, w in enumerate(words):
+        f = max(round(w['s'] * FPS) - 1, 0)
+        if i not in keys or f <= hook_end or in_bt(f) or f - last < GAP:
+            continue
+        state = 1.12 if state == 1.0 else 1.0
+        out.append((f, state))
+        last = f
+    for a, b in bts:
+        out.append((a, 1.0))
+    out.sort()
+    clean = []
+    for f, s in out:
+        if clean and clean[-1][1] == s:
+            continue
+        clean.append((f, s))
+    out = clean
+    z = ',\n    '.join('{"at": %d, "scale": %s}' % (f, s) for f, s in out)
+    # the zooms block: its opening line, any 4-space entry lines (none when freshly made), the closing "  ],"
+    src, n = re.subn(r'(  "zooms": \[[^\n]*\n)(?:    [^\n]*\n)*(  \],)', lambda m: m.group(1) + '    ' + z + '\n' + m.group(2), src, count=1)
+    if n != 1:
+        sys.exit('dynamic_keys: no "zooms" block in %s' % path)
+    open(path, 'w').write(src)
+    print('dynamic_keys %s: %d key words, %d zoom entries (hook ends f%d)' % (name, len(keys), len(out), hook_end))
+
+
+if __name__ == '__main__':
+    main()

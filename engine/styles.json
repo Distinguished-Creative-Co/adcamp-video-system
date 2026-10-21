@@ -1,0 +1,41 @@
+{
+  "_about": "Named reel styles. Say \"make this in <style>\": Studio is the full build (scripts/make_reel.sh); scripts/make_style.py <base> <minimal|hype> builds a variant from the same cut. Every variant needs its own preview approval before render.",
+  "styles": {
+    "studio": {
+      "what": "The full build: full-screen and glass-card window scenes, panel swaps (proof shot, stat, CTA card), back text, inserts (follow card, your clips), effects and transitions, cover title, line captions.",
+      "built_by": "scripts/make_reel.sh (the default workflow)",
+      "example": "sample"
+    },
+    "minimal": {
+      "what": "Strict captions only: full screen throughout, punch captions (1-2 words, bold), punch-in open and zooms allowed, no overlays outside captions (no panels, no back text, no cover title).",
+      "config": {
+        "scenes": "full",
+        "swaps": "none",
+        "backText": "drop",
+        "cover": null,
+        "captionStyle": "punch",
+        "zooms": "none",
+        "thumbnail": "drop",
+        "inserts": "drop",
+        "effects": "camera transitions only"
+      },
+      "example": "sample-minimal"
+    },
+    "hype": {
+      "what": "Trendy: full screen throughout, dynamic two-font captions (white caps in the house sans plus each line's key word in yellow Playfair italic, popping on word by word), zoom punch-ins on key words, back text kept, cover kept.",
+      "config": {
+        "scenes": "full",
+        "swaps": "none",
+        "backText": "keep",
+        "cover": "keep",
+        "captionStyle": "dynamic",
+        "captionAccent": "playfair",
+        "zooms": "generate (scripts/dynamic_keys.py)",
+        "thumbnail": "drop",
+        "inserts": "keep",
+        "effects": "keep"
+      },
+      "example": "sample-hype"
+    }
+  }
+}

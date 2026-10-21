@@ -1,0 +1,23 @@
+[
+ {
+  "raw": [
+   0.0,
+   1.28
+  ],
+  "why": "sample clip: silence before the first word"
+ },
+ {
+  "raw": [
+   50.3,
+   56.4
+  ],
+  "why": "sample clip: a 7-second pause between two lines"
+ },
+ {
+  "raw": [
+   101.0,
+   104.4
+  ],
+  "why": "sample clip: a lip smack and a breath between two takes"
+ }
+]

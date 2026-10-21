@@ -1,0 +1,9 @@
+{
+  "_about": "Your look. accent: any hex color (key words, back text, stat numbers, buttons, glows). sans: hanken | inter | montserrat | dmsans | poppins. serif (Hype key words): playfair | instrument | dmserif | fraunces. Re-render to apply. handle / name / avatar: the follow card (inserts), avatar is a square photo under public/ (e.g. inserts/avatar.png); leave handle empty if you never use it.",
+  "accent": "#F7C715",
+  "sans": "hanken",
+  "serif": "playfair",
+  "handle": "",
+  "name": "",
+  "avatar": ""
+}
