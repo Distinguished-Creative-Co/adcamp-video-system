@@ -4,16 +4,11 @@ Distinguished Vertical Editor (DVE) was built by Chris Serra for AdCamp members,
 
 ## Methods and code
 
-- **AI Video Editor by Ryan Musselman** (skool.com/aice). The engine's foundation comes from his
-  course and its Spotlight template: the take-cutting core that only cuts in silence, word alignment,
-  the audio path (picture rendered silent, narration mixed straight from the cut, mastered to
-  -14 LUFS), the seam check, the cover frame, the completion rule for panels, the charcoal stage
-  and the glow look. These files come from or are adapted from his course code, credited here:
-  `scripts/hostcut.py`, `scripts/word_align_x.py`, `scripts/verify_clean_read.py`,
-  `scripts/verify_brightness.py`, `scripts/script_phrases.py`, `scripts/verify_seams.py` (adapted),
-  `src/components/vc/style.ts`, `src/components/vc/CremeStage.tsx`, `src/engine.config.ts` (adapted),
-  `src/components/vc/fonts.ts` (adapted), `src/components/vertical/PanelGraphics.tsx` (adapted).
-  If you want to go deeper on AI video editing, his course is where this started.
+- **AI Video Editor by Ryan Musselman** (skool.com/aice). Much of how DVE works was learned from his course:
+  cutting only in silence, word-level alignment, rendering the picture silent and mixing the narration straight
+  from the cut, mastered to -14 LUFS, the seam check, the cover frame, the completion rule for panels, the
+  charcoal stage and the glow look. DVE's code for all of it was written from scratch. If you want to go deeper
+  on AI video editing, his course is where this started.
 - **Shortify by Claude Code Club** (claudecodeclub.ai, free resource). Proof shots, the post kit,
   the hook-holds rule, punch captions, the ducked music bed and light "paper" chapters.
 - **Chris Serra**: the vertical engine itself, the last-take selector, the three styles (Studio,
