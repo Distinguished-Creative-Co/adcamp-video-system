@@ -19,7 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 import reel_config  # noqa: E402
-import verify_clean_read  # noqa: E402  (copied, unchanged: find_repeats / norm)
+import verify_clean_read  # noqa: E402  (find_repeats / norm)
 
 FPS = 30
 GLIDE_F, SWAP_F = 20, 18
@@ -232,13 +232,15 @@ def main():
         L += ['- %s: %s' % (n['beat'], n['what']) for n in cfg['needs']] + ['']
     L += ['## 5. Checks', '',
           '- Structure (validateReel): %s' % ('PASS' if ok_ts else 'FAIL: ' + ts_msg),
-          '- Inserts (follow card identity in src/brand.json, cutaway clips present and long enough): %s' % ('none' if not inserts else ('PASS' if not ins_errs else 'FAIL: ' + '; '.join(ins_errs))),
+          '- Inserts (follow card identity in src/brand.json, cutaway clips present and long enough): %s' % ('none' if not inserts else ('PASS' if not ins_errs else 'FAIL: ' + '. '.join(ins_errs))),
           '- Timeline law (scene changes and swap edges in real gaps, scene changes after sentence ends): %s'
           % ('PASS' if not law else 'FAIL'),
           ] + ['  - ' + e for e in law] + [
           '- Seam check (stray sound or dead air at cut joins, head, tail): %s' % ('PASS' if seams_ok else 'FAIL'),
           ] + ['  - ' + x for x in seams_lines if x.startswith(('FAIL', 'warn', 'seams'))] + [
+          ] + ([] if os.environ.get('AVS_HOME') else [   # member installs have no claims guard
           '- Numbers on screen that were never spoken: %s' % ('none' if not any('never spoken' in e for e in law) else 'SEE ABOVE'),
+          ]) + [
           '- Sound effects: %s. Cues go on every move and panel element; null roles are skipped.' % (
               ', '.join('%s %s' % (k, 'set' if v else 'none') for k, v in role_names.items())),
           '- Audio delivery: narration mixed from the cut, mastered to -14 LUFS, true peak <= -1 dBTP (checked after render). '

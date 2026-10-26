@@ -1,23 +1,4 @@
 [
- {
-  "raw": [
-   0.0,
-   1.28
-  ],
-  "why": "sample clip: silence before the first word"
- },
- {
-  "raw": [
-   50.3,
-   56.4
-  ],
-  "why": "sample clip: a 7-second pause between two lines"
- },
- {
-  "raw": [
-   101.0,
-   104.4
-  ],
-  "why": "sample clip: a lip smack and a breath between two takes"
- }
+ {"raw": [57.20, 60.00], "why": "sample clip: a false start (\"Four, ... four, all of them\") and the pause before it"},
+ {"raw": [100.50, 100.94], "why": "sample clip: a mouth sound in the pause before \"One fee\""}
 ]

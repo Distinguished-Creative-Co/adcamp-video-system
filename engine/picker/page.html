@@ -1,0 +1,222 @@
+<main class="page">
+  __TOP__
+  <header class="hero">
+    <span class="eyebrow-pill">Watch it, then pick it</span>
+    <h1>How should your videos <span class="y">look?</span></h1>
+    <p class="lede">Every card plays on a sample video. Hover over one, or press its play button, and click to pick it. Pick a starter look, or mix your own captions and effects, choose your fonts if you like, then save.</p>
+    <div class="ways" role="group" aria-label="Two ways to choose">
+      <button type="button" id="t-style" aria-pressed="true" aria-controls="p-style">A starter look</button>
+      <button type="button" id="t-mix" aria-pressed="false" aria-controls="p-mix">Mix your own</button>
+    </div>
+  </header>
+
+  <section class="card done" id="done" role="status" aria-live="polite"></section>
+
+  <div id="p-style">
+    <section class="pick-sec" aria-labelledby="h-styles">
+      <h2 id="h-styles">Starter looks</h2>
+      <p class="note">One pick sets your captions, your effects and the pace, in your own fonts and color. Your saved styles are here too.</p>
+      <div class="grid" id="styles" role="radiogroup" aria-labelledby="h-styles"></div>
+    </section>
+  </div>
+
+  <div id="p-mix" hidden>
+    <section class="pick-sec" aria-labelledby="h-cap">
+      <h2 id="h-cap">Captions</h2>
+      <p class="note">Pick one.</p>
+      <div class="grid" id="captions" role="radiogroup" aria-labelledby="h-cap"></div>
+    </section>
+    <section class="pick-sec" aria-labelledby="h-fx" id="fxsec">
+      <h2 id="h-fx">Effects</h2>
+      <p class="note">Pick any. Claude only uses one where it fits what you're saying.</p>
+      <label class="switch"><input type="checkbox" id="partsw"> Choose where in your video each effect may go (tick an effect, then press Start, Middle or End on it)</label>
+      <div class="grid" id="effects" aria-labelledby="h-fx"></div>
+    </section>
+    <section class="pick-sec" aria-labelledby="h-tr">
+      <h2 id="h-tr">Transitions</h2>
+      <p class="note">Pick any. They play where your shots change.</p>
+      <div class="grid" id="transitions" aria-labelledby="h-tr"></div>
+    </section>
+  </div>
+
+  <section class="pick-sec" aria-labelledby="h-fonts">
+    <h2 id="h-fonts">Your fonts</h2>
+    <p class="note">Optional. Watch the words: the plain ones are your main font, the slanted key word is your second font. Used in every video, card and carousel.</p>
+    <div class="grid" id="fonts" role="radiogroup" aria-labelledby="h-fonts"></div>
+  </section>
+
+  <div class="pbar">
+    <div class="sum" id="sum" aria-live="polite">Nothing picked yet</div>
+    <button type="button" class="btn btn-y" id="save" disabled>Save my pick</button>
+  </div>
+</main>
+<script type="application/json" id="avs-state">__STATE__</script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var S = { mode: 'style', style: null, captionStyle: null, effects: {}, transitions: {}, parts: {}, partsOn: false, fonts: null };
+  var C = null, playing = null;
+  var TICK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+  var PLAY = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  var PAUSE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="4" width="5" height="16" rx="1"/><rect x="14" y="4" width="5" height="16" rx="1"/></svg>';
+
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function stop() { if (playing) { playing.v.pause(); playing.b.innerHTML = PLAY; playing.b.setAttribute('aria-label', 'Play preview of ' + playing.n); playing = null; } }
+  function play(v, b, n) { if (playing && playing.v === v) return; stop(); v.play().catch(function () {}); b.innerHTML = PAUSE; b.setAttribute('aria-label', 'Pause preview of ' + n); playing = { v: v, b: b, n: n }; }
+
+  function card(item, group, type, name) {
+    var lab = document.createElement('label');
+    lab.className = 'pcard';
+    var id = group + '-' + item.key;
+    var shot = item.preview
+      ? '<video muted loop playsinline preload="none" poster="' + esc(item.poster) + '" src="' + esc(item.preview) + '" aria-hidden="true"></video><button class="play" type="button" aria-label="Play preview of ' + esc(item.name) + '">' + PLAY + '</button>'
+      : '<div class="blank">' + esc(item.name) + '</div>';
+    lab.innerHTML = '<input type="' + type + '" name="' + name + '" id="' + id + '" value="' + esc(item.key) + '">' +
+      '<div class="shot">' + shot + '<span class="tick" aria-hidden="true">' + TICK + '</span></div>' +
+      '<div class="meta"><div class="name">' + esc(item.name) + '</div><div class="line">' + esc(item.line) + '</div>' +
+      (item.mine ? '<span class="tag">Yours</span>' : '') + (C.default === item.key ? ' <span class="tag">Your default</span>' : '') +
+      (group === 'fonts' && C.fonts && C.fonts.sans === item.sans && C.fonts.serif === item.serif ? '<span class="tag">Your fonts now</span>' : '') +
+      (group === 'effects' ? '<div class="parts" role="group" aria-label="Where ' + esc(item.name) + ' can go"><button type="button" data-p="hook" aria-pressed="false">Start</button><button type="button" data-p="middle" aria-pressed="false">Middle</button><button type="button" data-p="end" aria-pressed="false">End</button></div>' : '') +
+      '</div>';
+    var v = lab.querySelector('video'), b = lab.querySelector('.play');
+    if (v) {
+      if (!reduce) {
+        lab.addEventListener('mouseenter', function () { play(v, b, item.name); });
+        lab.addEventListener('mouseleave', function () { if (playing && playing.v === v) stop(); });
+      }
+      b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); if (playing && playing.v === v) stop(); else play(v, b, item.name); });
+    }
+    var input = lab.querySelector('input');
+    input.addEventListener('change', function () { pick(group, item.key, input.checked); });
+    lab.querySelectorAll('.parts button').forEach(function (pb) {
+      pb.addEventListener('click', function (e) {
+        e.preventDefault(); e.stopPropagation();
+        var on = pb.getAttribute('aria-pressed') !== 'true';
+        pb.setAttribute('aria-pressed', on ? 'true' : 'false');
+        var set = S.parts[item.key] || {}; set[pb.dataset.p] = on; S.parts[item.key] = set; summary();
+      });
+    });
+    return lab;
+  }
+
+  function pick(group, key, on) {
+    if (group === 'styles') { S.style = key; }
+    else if (group === 'captions') { S.captionStyle = key; }
+    else if (group === 'fonts') { S.fonts = key; }
+    else { S[group][key] = on; }
+    document.querySelectorAll('#' + group + ' .pcard').forEach(function (c) { c.classList.toggle('on', c.querySelector('input').checked); });
+    summary();
+  }
+
+  function nameOf(group, key) {
+    var list = group === 'styles' ? C.catalog.styles.concat(C.mine) : (C.catalog[group] || []);
+    for (var i = 0; i < list.length; i++) if (list[i].key === key) return list[i].name;
+    return key;
+  }
+
+  function chosen(group) { return Object.keys(S[group]).filter(function (k) { return S[group][k]; }); }
+
+  function summary() {
+    var t, sub = '', ok;
+    if (S.mode === 'style') {
+      ok = !!S.style; t = ok ? 'Look: ' + nameOf('styles', S.style) : 'Pick a starter look';
+    } else {
+      var fx = chosen('effects'), tr = chosen('transitions');
+      ok = !!S.captionStyle;
+      t = ok ? 'Captions: ' + nameOf('captions', S.captionStyle) : 'Pick a caption style';
+      sub = (fx.length ? fx.length + ' effect' + (fx.length > 1 ? 's' : '') : 'No effects') + ', ' + (tr.length ? tr.length + ' transition' + (tr.length > 1 ? 's' : '') : 'no transitions');
+    }
+    if (S.fonts) sub = (sub ? sub + '. ' : '') + 'Fonts: ' + nameOf('fonts', S.fonts);
+    $('sum').innerHTML = esc(t) + (sub ? '<small>' + esc(sub) + '</small>' : '');
+    $('save').disabled = !ok;
+  }
+
+  function setMode(m) {
+    S.mode = m;
+    $('t-style').setAttribute('aria-pressed', m === 'style' ? 'true' : 'false');
+    $('t-mix').setAttribute('aria-pressed', m === 'mix' ? 'true' : 'false');
+    $('p-style').hidden = m !== 'style'; $('p-mix').hidden = m !== 'mix';
+    stop(); summary();
+  }
+
+  function picked() {
+    var body = { mode: S.mode, fonts: S.fonts };
+    if (S.mode === 'style') body.style = S.style;
+    else {
+      body.captionStyle = S.captionStyle; body.effects = chosen('effects'); body.transitions = chosen('transitions');
+      if (S.partsOn) {
+        var parts = {};
+        body.effects.forEach(function (k) { var p = S.parts[k] || {}; var l = ['hook', 'middle', 'end'].filter(function (x) { return p[x]; }); if (l.length) parts[k] = l; });
+        body.parts = parts;
+      }
+    }
+    return body;
+  }
+
+  function saved(pane) {
+    var d = $('done');
+    var f = S.fonts ? ' Your fonts are set to ' + esc(nameOf('fonts', S.fonts)) + '.' : '';
+    var back = pane ? 'Tell Claude in the chat: <b>I saved my pick</b>.' : 'Go back to Claude and say: <b>I saved my pick</b>.';
+    d.innerHTML = S.mode === 'style'
+      ? '<h2>Saved</h2><p>' + back + ' Your videos will use ' + esc(nameOf('styles', S.style)) + '.' + f + '</p>'
+      : '<h2>Saved</h2><p>' + back + ' Claude asks what to call this look, then saves it as one of your styles.' + f + '</p>';
+    d.classList.add('show'); d.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); summary();
+  }
+
+  function failed() { $('sum').innerHTML = '<span class="err">That did not save. Try again, or tell Claude what you picked.</span>'; $('save').disabled = false; }
+
+  function save() {
+    var body = picked();
+    $('save').disabled = true;
+    if (PANE) {
+      // in the Claude app's pane: the pick goes into this page's own store, where Claude reads it
+      window.claude.use('db').then(function (db) {
+        if (!db) throw new Error('no store');
+        body.updated = new Date().toISOString();
+        return db.doc('picks/current').set(body);
+      }).then(function () { saved(true); }).catch(failed);
+      return;
+    }
+    fetch('/api/picks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'not saved'); return j; }); })
+      .then(function () { saved(false); }).catch(failed);
+  }
+
+  function start(st) {
+    C = st;
+    st.catalog.styles.concat(st.mine).forEach(function (it) { $('styles').appendChild(card(it, 'styles', 'radio', 'style')); });
+    st.catalog.captions.forEach(function (it) { $('captions').appendChild(card(it, 'captions', 'radio', 'captions')); });
+    st.catalog.effects.forEach(function (it) { $('effects').appendChild(card(it, 'effects', 'checkbox', 'fx')); });
+    st.catalog.transitions.forEach(function (it) { $('transitions').appendChild(card(it, 'transitions', 'checkbox', 'tr')); });
+    (st.catalog.fonts || []).forEach(function (it) { $('fonts').appendChild(card(it, 'fonts', 'radio', 'fonts')); });
+    var p = st.picks;
+    // a font pair from an earlier pick only comes back while it is still their fonts (a later font change wins)
+    if (p && p.fonts && st.fonts && p.fonts.sans === st.fonts.sans && p.fonts.serif === st.fonts.serif) { var fi = $('fonts-' + p.fonts.key); if (fi) { fi.checked = true; pick('fonts', p.fonts.key, true); } }
+    if (p && p.mode === 'mix') {
+      setMode('mix');
+      var c = $('captions-' + p.captionStyle); if (c) { c.checked = true; pick('captions', p.captionStyle, true); }
+      (p.effects || []).forEach(function (k) { var i = $('effects-' + k); if (i) { i.checked = true; pick('effects', k, true); } });
+      (p.transitions || []).forEach(function (k) { var i = $('transitions-' + k); if (i) { i.checked = true; pick('transitions', k, true); } });
+    } else {
+      var want = (p && p.style) || st.default;
+      var s = want && $('styles-' + want); if (s) { s.checked = true; pick('styles', want, true); }
+    }
+    summary();
+  }
+
+  // the pane build carries its catalog inside the page; the local Picker asks its server
+  var embedded = null;
+  try { embedded = JSON.parse($('avs-state').textContent); } catch (e) { embedded = null; }
+  var PANE = !!embedded;
+  if (embedded) start(embedded);
+  else fetch('/api/state', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(start)
+    .catch(function () { $('sum').innerHTML = '<span class="err">The previews did not load. Go back to Claude and tell it the Picker page is empty.</span>'; });
+
+  $('t-style').addEventListener('click', function () { setMode('style'); });
+  $('t-mix').addEventListener('click', function () { setMode('mix'); });
+  $('partsw').addEventListener('change', function () { S.partsOn = this.checked; $('fxsec').classList.toggle('partson', S.partsOn); });
+  $('save').addEventListener('click', save);
+})();
+</script>

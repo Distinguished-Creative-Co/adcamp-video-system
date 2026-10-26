@@ -1,6 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, OffthreadVideo, Sequence, staticFile } from 'remotion';
-import { CREME_DARK, GOLD } from '../vc/style';
+import { CREME_DARK, ACCENT_ON_FOOTAGE } from '../vc/style';
 import { SANS } from '../vc/fonts';
 import type { Cover as CoverT, ReelConfig } from '../../methodology/ReelConfig';
 import { useGrade } from './Grade';
@@ -29,7 +29,7 @@ export const Cover: React.FC<{ cfg: ReelConfig; cover: CoverT }> = ({ cfg, cover
         {rows.map((r, i) => (
           <div key={i} style={{ fontFamily: SANS, fontWeight: 800, fontSize: 128, lineHeight: 0.98, letterSpacing: '-0.03em', color: CREME_DARK.ink }}>
             {r.map((w, j) => (
-              <span key={j} style={w === cover.accent ? { color: GOLD.yellow, textShadow: '0 0 60px rgba(var(--accent-rgb,247,199,21),0.55)' } : undefined}>
+              <span key={j} style={w === cover.accent ? { color: ACCENT_ON_FOOTAGE, textShadow: '0 0 60px rgba(var(--accent-rgb,247,199,21),0.55)' } : undefined}>
                 {w}{j < r.length - 1 ? ' ' : ''}
               </span>
             ))}

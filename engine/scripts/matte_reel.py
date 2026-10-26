@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Foreground cutouts for BACK TEXT (big highlighted words that sit behind the host).
 
-    "$DVE_MATTE_PYTHON" scripts/matte_reel.py <name>
+    "$AVS_MATTE_PYTHON" scripts/matte_reel.py <name>
 
 For every entry in the config's "backText", cuts the host out of the cut over that entry's
 frames with MediaPipe's selfie segmenter (Apache-2.0, runs locally) and writes
@@ -14,7 +14,7 @@ unchanged.
 The segmenter runs twice per frame: once on the full frame to find the person, once on a
 crop around them (four times the detail per pixel). A guided filter then pulls the mask edge
 onto the real edges in the picture, and a light temporal blend keeps it steady between frames. The model file lives in the runtime's model
-folder (DVE_MODELS, set by the installer), in <engine>/models, or next to this script.
+folder (AVS_MODELS, set by the installer), in <engine>/models, or next to this script.
 """
 import hashlib
 import json
@@ -39,10 +39,10 @@ def fg_path(stem, a, b):
 
 
 def model_path():
-    for d in (os.environ.get('DVE_MODELS'), os.path.join(ROOT, 'models'), HERE):
+    for d in (os.environ.get('AVS_MODELS'), os.path.join(ROOT, 'models'), HERE):
         if d and os.path.exists(os.path.join(d, MODEL_NAME)):
             return os.path.join(d, MODEL_NAME)
-    sys.exit('matte: the cutout model %s is missing (looked in DVE_MODELS, models/ and scripts/). Run the installer cutout step.' % MODEL_NAME)
+    sys.exit('matte: the cutout model %s is missing (looked in AVS_MODELS, models/ and scripts/). Run the installer cutout step.' % MODEL_NAME)
 
 
 def box(a, r):
@@ -74,7 +74,7 @@ def main():
     if not items:
         print('matte: %s has no backText or thumbnail, nothing to do' % name)
         return
-    cut = os.path.join(ROOT, 'public', cfg['src'])
+    cut = os.path.join(ROOT, 'public', reel_config.host_file(cfg))   # the color-graded picture when there is one
     stem = reel_config.stem(cfg)
     cut_id = hashlib.sha1(open(cut, 'rb').read(1 << 20) + str(os.path.getsize(cut)).encode()).hexdigest()[:12]
     todo = []

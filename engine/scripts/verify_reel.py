@@ -100,7 +100,7 @@ def main():
     cfg = reel_config.load(name)
     global GRADED
     GRADED = bool(cfg.get('grade'))
-    src = os.path.join(ROOT, 'public', cfg['src'])
+    src = os.path.join(ROOT, 'public', reel_config.host_file(cfg))   # compare against the picture as drawn (graded or not)
     fails, notes = [], []
 
     pr = json.loads(subprocess.run(['ffprobe', '-v', 'error', '-print_format', 'json', '-show_streams', '-show_format', out],
@@ -153,7 +153,9 @@ def main():
         f = sc['from'] + GLIDE_F + 12
         if in_swap(f):
             f = next((s['out'] + SWAP_F + 12 for s in swaps if s['in'] - 2 <= f <= s['out'] + SWAP_F + 2 and s['out'] < cfg['frames']), None)
-            if f is None:
+            nxt = min([x['from'] for x in cfg['scenes'] if x['from'] > sc['from']] + [cfg['frames']])
+            if f is None or f >= nxt - GLIDE_F:   # the panel holds until the scene ends: no card at rest to check
+                notes.append('card, scene %d: panel holds the whole scene, no resting card to check' % (i + 1))
                 continue
         d, arg = best_match(cfg, out, src, f / 30.0, CARD, (600, 760), (1.0, 1.01, 1.02, 1.03), (-3, 0, 3), (SW, SH))
         notes.append('card, scene %d @%df: diff %.1f (zoom %.2f, dy %d)' % (i + 1, f, d, arg[0], arg[1]))
@@ -193,16 +195,23 @@ def main():
 
     # motion: never a frozen stretch
     frozen = []
+    # a slide card fills the frame and holds still by design (the speaker talks in a small corner window)
+    slides = [(e['in'] / 30.0, e['out'] / 30.0) for e in cfg.get('effects', []) if e.get('kind') == 'card']
     t = 0.25
     while t + 0.5 < dur - 0.1:
+        if any(a - 0.5 <= t <= b for a, b in slides):
+            t += 1.0
+            continue
         d = diff(grab(out, t, None, (108, 192)), grab(out, t + 0.5, None, (108, 192)))
         if d < 0.3:
             frozen.append('%.2fs (diff %.2f)' % (t, d))
         t += 1.0
+    if slides:
+        notes.append('motion: %d slide card(s) skipped, they hold still by design' % len(slides))
     notes.append('motion: %s' % ('always moving' if not frozen else 'frozen at ' + ', '.join(frozen[:5])))
     fails += ['frozen: ' + x for x in frozen[:5]]
 
-    # audio: loudness contract, then drift against the cut (Minimalist qa-output.py idea)
+    # audio: loudness contract, then drift against the cut
     lt = subprocess.run(['ffmpeg', '-hide_banner', '-i', out, '-af', 'loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json',
                          '-f', 'null', '-'], capture_output=True, text=True).stderr
     import re as _re

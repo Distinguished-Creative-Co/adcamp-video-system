@@ -1,6 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Img, OffthreadVideo, staticFile } from 'remotion';
-import { ACCENT_RGB, CREME_DARK, GOLD } from '../vc/style';
+import { ACCENT_RGB, CREME_DARK, GOLD, ACCENT_ON_FOOTAGE } from '../vc/style';
 import { SANS } from '../vc/fonts';
 import { CharcoalBg } from '../vc/CremeStage';
 import { thumbFgSrc, type ReelConfig } from '../../methodology/ReelConfig';
@@ -8,7 +8,7 @@ import { place } from '../../methodology/layout';
 import { useGrade } from './Grade';
 
 /**
- * COMPANION PACK (adapted from Georgy): covers and static ads rendered from the SAME config
+ * COMPANION PACK: covers and static ads rendered from the SAME config
  * as the reel, so they can only say what the reel already says: the cover title, the stat
  * panel (value, label, kicker), and the CTA. Each format is recomposed for its own shape,
  * never a stretched frame. Critical text stays in a conservative central region.
@@ -29,7 +29,7 @@ const Title: React.FC<{ title: string; accent?: string; size: number }> = ({ tit
       {[words.slice(0, mid), words.slice(mid)].filter((r) => r.length).map((r, i) => (
         <div key={i} style={{ fontFamily: SANS, fontWeight: 800, fontSize: size, lineHeight: 0.98, letterSpacing: '-0.03em', color: CREME_DARK.ink }}>
           {r.map((w, j) => (
-            <span key={j} style={w === accent ? { color: GOLD.yellow, textShadow: `0 0 60px rgba(${ACCENT_RGB},0.5)` } : undefined}>{w}{j < r.length - 1 ? ' ' : ''}</span>
+            <span key={j} style={w === accent ? { color: ACCENT_ON_FOOTAGE, textShadow: `0 0 60px rgba(${ACCENT_RGB},0.5)` } : undefined}>{w}{j < r.length - 1 ? ' ' : ''}</span>
           ))}
         </div>
       ))}
@@ -76,7 +76,7 @@ const ThumbnailView: React.FC<{ cfg: ReelConfig }> = ({ cfg }) => {
       <AbsoluteFill style={{ background: `radial-gradient(ellipse 70% 30% at 50% 22%, rgba(${ACCENT_RGB},0.16), rgba(${ACCENT_RGB},0) 70%)` }} />
       {placed.map(({ r, size, y }, i) => (
         <div key={i} style={{ position: 'absolute', left: 0, width: 1080, top: y, textAlign: 'center', fontWeight: 900, fontSize: size,
-          lineHeight: 0.92, letterSpacing: '-0.035em', whiteSpace: 'nowrap', color: GOLD.yellow,
+          lineHeight: 0.92, letterSpacing: '-0.035em', whiteSpace: 'nowrap', color: ACCENT_ON_FOOTAGE,
           textShadow: `0 0 90px rgba(${ACCENT_RGB},0.45), 0 10px 40px rgba(0,0,0,0.35)` }}>{r}</div>
       ))}
       <Img src={staticFile(thumbFgSrc(cfg.src, t.frame))} style={{ position: 'absolute', left: 0, top: dy, width: cfg.source.w, height: cfg.source.h, filter: gr.filter }} />
@@ -129,13 +129,13 @@ export const Companion: React.FC<{ cfg: ReelConfig | null; format: CompanionForm
     return (
       <div style={{ width, boxSizing: 'border-box', padding: `${34 * u}px ${40 * u}px`, borderRadius: 32 * u, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.18)' }}>
         {stat.s.kicker ? <div style={{ fontWeight: 700, fontSize: 24 * u, letterSpacing: '0.1em', textTransform: 'uppercase', color: CREME_DARK.inkDim, marginBottom: 14 * u, textWrap: 'balance' } as React.CSSProperties}>{stat.s.kicker}</div> : null}
-        <div style={{ fontWeight: 800, fontSize: vSize, lineHeight: 1, letterSpacing: '-0.04em', color: GOLD.yellow, textShadow: `0 0 70px rgba(${ACCENT_RGB},0.45)`, whiteSpace: 'nowrap' }}>{v}</div>
+        <div style={{ fontWeight: 800, fontSize: vSize, lineHeight: 1, letterSpacing: '-0.04em', color: ACCENT_ON_FOOTAGE, textShadow: `0 0 70px rgba(${ACCENT_RGB},0.45)`, whiteSpace: 'nowrap' }}>{v}</div>
         <div style={{ marginTop: 16 * u, fontWeight: 700, fontSize: 34 * u, lineHeight: 1.15, color: CREME_DARK.ink, textWrap: 'balance' } as React.CSSProperties}>{stat.k.label}</div>
       </div>
     );
   };
   const pill = button ? (
-    <div style={{ alignSelf: 'flex-end', padding: `${24 * u}px ${40 * u}px`, borderRadius: 999, background: GOLD.yellow, color: GOLD.ink, fontWeight: 800, fontSize: 40 * u, boxShadow: `0 0 60px rgba(${ACCENT_RGB},0.4)` }}>{button}</div>
+    <div style={{ alignSelf: 'flex-end', padding: `${24 * u}px ${40 * u}px`, borderRadius: 999, background: ACCENT_ON_FOOTAGE, color: GOLD.ink, fontWeight: 800, fontSize: 40 * u, boxShadow: `0 0 60px rgba(${ACCENT_RGB},0.4)` }}>{button}</div>
   ) : null;
   const shell = (children: React.ReactNode) => (
     <AbsoluteFill style={{ fontFamily: SANS, ['--accent-rgb' as string]: ACCENT_RGB } as React.CSSProperties}>

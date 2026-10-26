@@ -18,7 +18,7 @@ export const GLIDE_F = 20;   // full <-> card morph (0.67s)
 export const SWAP_F = 18;    // card <-> panel swap (0.6s)
 export const LEAD_F = 5;     // a word pops this many frames before it is voiced
 export const HOLD_S = 1.2;   // a finished line lingers at most this long
-export const BREATH_F = 90;  // plain speaker between two panel swaps (Minimalist: 3s of avatar between takeovers)
+export const BREATH_F = 90;  // plain speaker between two panel swaps (3s of the speaker between takeovers)
 export const ENTER_F = 12;   // a panel element's entrance
 export const SETTLE_F = 30;  // a panel's last element is settled at least this long before it slides out (the settle rule)
 
@@ -29,6 +29,7 @@ export const CARD: View = { x: 240, y: 800, w: 600, h: 760, r: 28, ax: 0.5, ay: 
 export const PANEL: Rect & { r: number } = { x: 60, y: 140, w: 860, h: 1420, r: 32 }; // right edge 920: 40px clear of the IG action rail
 export const PANEL_ENTER_X = CANVAS.w + 60;      // panel waits fully off the right edge
 export const CARD_EXIT_DX = -(CARD.x + CARD.w + 80); // card leaves fully off the left edge
+export const CARD_HOST: View = { x: 60, y: 1100, w: 290, h: 360, r: 26, ax: 0.5, ay: 0.46 }; // the host's corner window while a full-frame card is up (above the app's bottom strip)
 export const INSET: View = { x: 56, y: 996, w: 280, h: 360, r: 24, ax: 0.5, ay: 0.48 }; // panel-relative
 
 // caption regions (absolute unless noted)

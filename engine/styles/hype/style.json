@@ -1,0 +1,7 @@
+{
+ "name": "Hype",
+ "slug": "hype",
+ "builtin": true,
+ "base": "hype",
+ "hidden": true
+}

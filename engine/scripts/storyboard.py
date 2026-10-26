@@ -3,19 +3,21 @@
 
     python3 scripts/storyboard.py <name>        after the preview stills exist (make_reel.sh --preview)
 
-One row per beat (each scene of the reel): its time, real preview stills, the words said, what moves
-on screen (panels, words behind the host, inserts), what you hear, and a box for a note. On top, what
-the edit still needs from the person ("needs" in the config), if anything. Colours and font come from
-src/brand.json, so the page looks like their reels.
+One row per part of the reel (each scene, long ones split at sentence ends): its time, real preview stills, the
+words said, what moves on screen, what you hear. On top, what the edit still needs from the person ("needs" in the
+config), if anything. The page wears the AdCamp look (scripts/adcamp_page.py).
 
-Writes qa/<name>/storyboard/index.html with its stills beside it. Two ways to review it:
-  - Claude artifacts: publish index.html with the frames/ folder and comments turned on; each comment
-    names its beat in the text ("b03: ...")
-  - anywhere: python3 scripts/review_server.py <name>, open the address it prints, leave notes, press
-    "Looks good, render it". Notes land in qa/<name>/storyboard/notes.json.
+Writes qa/<name>/storyboard/ with its stills in frames/, two ways to review:
+  - pane.html, published in the Claude app's pane with every frame (files.json) and
+    capabilities {"comments": {"composer_only": true}}: a Comment button per part opens the app's own comment box,
+    and the comment goes to Claude (read it with ArtifactComments; the thread sits on the part, #b03).
+  - index.html, the fallback in a browser tab: python3 scripts/review_server.py <name> --until-done, a note box per
+    part, Save notes and Done. Notes land in qa/<name>/storyboard/notes.json.
 """
 import html
+import datetime
 import json
+import re
 import os
 import shutil
 import subprocess
@@ -24,11 +26,24 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
+import adcamp_page  # noqa: E402
 import reel_config  # noqa: E402
 
 FPS = 30
-SOUND_WORDS = {'transition_whoosh': 'whoosh', 'element_land': 'soft land', 'state_change': 'click', 'back_text_hit': 'impact',
-               'insert_pop': 'pop', 'cta_ding': 'ding', 'cta_riser': 'riser'}
+SOUND_WORDS = {'transition_whoosh': 'a whoosh', 'element_land': 'a soft tap', 'state_change': 'a click', 'back_text_hit': 'a hit',
+               'insert_pop': 'a pop', 'cta_ding': 'a ding', 'cta_riser': 'a rising swell'}
+
+
+def fx_names():
+    """Effect names as the member saw them in the Picker (picker/catalog.json)."""
+    try:
+        cat = json.load(open(os.path.join(ROOT, 'picker', 'catalog.json')))
+        return {e['key']: e['name'] for e in cat.get('effects', [])}
+    except (OSError, ValueError):
+        return {}
+
+
+FX = fx_names()
 
 
 def tc(f):
@@ -37,13 +52,29 @@ def tc(f):
 
 
 def beats(cfg):
+    """Storyboard beats: the scenes, with any scene longer than about 7 s split at sentence ends into beats of
+    about 5 s, so a full-screen style is several beats a person can point at, not one long one."""
     sc = sorted(cfg['scenes'], key=lambda s: s['from'])
-    out = []
+    fps = cfg.get('fps', 30)
+    ends = []   # frames where a new sentence starts
+    ws = [w for w in cfg['words'] if w.get('t')]
+    for w, nxt in zip(ws, ws[1:]):
+        if re.search(r'[.?!]["\u201d]?$', w['t']):
+            ends.append(round(nxt['s'] * fps) - 3)
+    spans = []
     for i, s in enumerate(sc):
         a = s['from']
         b = sc[i + 1]['from'] if i + 1 < len(sc) else cfg['frames']
-        out.append({'id': 'b%02d' % (i + 1), 'from': a, 'to': b, 'mode': s['mode'], 'tone': s.get('tone')})
-    return out
+        while b - a > 7 * fps:
+            ok = [e for e in ends if e >= a + 2 * fps and b - e >= 2 * fps]
+            near = [e for e in ok if e <= a + 7 * fps]
+            if not ok:
+                break
+            c = min(near, key=lambda e: abs(e - (a + 5 * fps))) if near else ok[0]   # a long sentence: its own beat
+            spans.append((a, c, s))
+            a = c
+        spans.append((a, b, s))
+    return [{'id': 'b%02d' % (i + 1), 'from': a, 'to': b, 'mode': s['mode'], 'tone': s.get('tone')} for i, (a, b, s) in enumerate(spans)]
 
 
 def overlaps(x, a, b):
@@ -57,9 +88,10 @@ def what_moves(cfg, bt):
         out.append('You full screen' + (', punched in at the open' if a == 0 and (cfg.get('open') or {}).get('scale', 1) > 1 else ''))
     else:
         out.append('You in the glass card on a %s stage, captions above' % (bt.get('tone') or 'dark'))
+    over = ((cfg.get('look') or {}).get('backText') or {}).get('over')   # a hook title drawn in front, over their head
     for t in cfg.get('backText') or []:
         if overlaps(t, a, b):
-            out.append('Big words behind you: %s' % t['text'])
+            out.append(('Hook title over you: %s' if over or t.get('over') else 'Big words behind you: %s') % t['text'])
     for s in cfg.get('swaps') or []:
         if overlaps(s, a, b):
             k = s['content']['kind']
@@ -69,19 +101,20 @@ def what_moves(cfg, bt):
             out.append('%s slides in at %s%s' % (label, tc(s['in']), (': ' + extra) if extra else ''))
     for n in cfg.get('inserts') or []:
         if overlaps(n, a, b):
-            out.append('Follow card' if n['kind'] == 'follow' else 'Your clip %s%s' % (n['src'], (' ("%s")' % n['label']) if n.get('label') else ''))
+            out.append('Follow card' if n['kind'] == 'follow' else 'Your clip%s' % ((' ("%s")' % n['label']) if n.get('label') else ''))
     for e in cfg.get('effects') or []:
         if e['kind'] == 'transition':
             if a <= e['at'] < b:
                 out.append('%s transition at %s' % (e['style'].capitalize(), tc(e['at'])))
         elif overlaps(e, a, b):
             detail = e.get('word') or e.get('label') or e.get('keys') or e.get('text') or e.get('value') or ''
-            out.append('Effect: %s%s at %s' % (e['kind'].replace('-', ' '), (' (%s)' % detail) if detail else '', tc(e['in'])))
+            label = 'A slide over the picture' if e['kind'] == 'card' else FX.get(e['kind'], e['kind'].replace('-', ' ').capitalize())
+            out.append('%s%s at %s' % (label, (' (%s)' % detail) if detail else '', tc(e['in'])))
     for z in cfg.get('zooms') or []:
         if a <= z.get('at', -1) < b:
-            out.append('Zoom to %.2fx at %s' % (z.get('scale', 1), tc(z['at'])))
+            out.append('%s at %s' % ('Camera pushes in' if z.get('scale', 1) > 1 else 'Camera eases back out', tc(z['at'])))
     if a == 0 and cfg.get('cover'):
-        out.append('Cover title on frame 0: "%s"' % cfg['cover']['title'])
+        out.append('Cover title (what shows before it plays): "%s"' % cfg['cover']['title'])
     return out
 
 
@@ -111,13 +144,13 @@ def main():
     if not stills:
         sys.exit('storyboard: no preview stills yet. Run make_reel.sh <video> %s --preview first.' % name)
     out_dir = os.path.join(ROOT, 'qa', name, 'storyboard')
+    notes = os.path.join(out_dir, 'notes.json')
+    if os.path.exists(notes):   # last round's notes were applied: keep them, but never let them count again
+        os.rename(notes, os.path.join(out_dir, 'notes-applied-%s.json' % datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
     fr_dir = os.path.join(out_dir, 'frames')
     if os.path.isdir(fr_dir):
         shutil.rmtree(fr_dir)
     os.makedirs(fr_dir)
-    brand = json.load(open(os.path.join(ROOT, 'src', 'brand.json')))
-    accent = brand.get('accent', '#F7C715')
-    font = {'hanken': 'Hanken Grotesk', 'inter': 'Inter', 'montserrat': 'Montserrat', 'dmsans': 'DM Sans', 'poppins': 'Poppins'}.get(brand.get('sans'), 'Hanken Grotesk')
     words = cfg['words']
 
     def said(a, b):
@@ -133,117 +166,147 @@ def main():
             jpg = 'f%04d.jpg' % f
             subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(prev, 'f%04d.png' % f), '-vf', 'scale=324:-2', '-q:v', '4',
                             os.path.join(fr_dir, jpg)], check=True)
-            imgs.append('<figure><img src="frames/%s" alt="Frame %d" loading="lazy" width="162" height="288"><figcaption>%s</figcaption></figure>' % (jpg, f, tc(f)))
+            imgs.append('<figure><img src="frames/%s" alt="Frame at %s" loading="lazy" width="162" height="288"><figcaption>%s</figcaption></figure>'
+                        % (jpg, tc(f), tc(f)))
         moves = ''.join('<li>%s</li>' % html.escape(m) for m in what_moves(cfg, bt))
-        hear = sounds(cfg, bt)
-        hear_html = ''.join('<li>%s</li>' % html.escape(h) for h in hear) or '<li>Your voice only</li>'
-        rows.append('''
-<section class="beat" id="{id}">
-  <div class="frames">{imgs}</div>
-  <div class="body">
-    <p class="meta"><span class="id">{id}</span> {a} to {b}</p>
-    <p class="line">{line}</p>
-    <div class="cols"><div><h3>On screen</h3><ul>{moves}</ul></div><div><h3>You hear</h3><ul>{hear}</ul></div></div>
-    <label class="note"><span>Note for {id}</span><textarea data-beat="{id}" rows="2" placeholder="Anything to change here? Leave it blank if it looks good."></textarea></label>
-  </div>
-</section>'''.format(id=bt['id'], imgs=''.join(imgs) or '<p class="none">No still in this beat</p>', a=tc(bt['from']), b=tc(bt['to']),
-                     line=html.escape(said(bt['from'], bt['to'])) or '<em>(no words in this beat)</em>', moves=moves, hear=hear_html))
+        hear = ''.join('<li>%s</li>' % html.escape(h) for h in sounds(cfg, bt)) or '<li>Your voice only</li>'
+        line = html.escape(said(bt['from'], bt['to']))
+        rows.append({'id': bt['id'], 'n': int(bt['id'][1:]), 'a': tc(bt['from']), 'b': tc(bt['to']),
+                     'imgs': ''.join(imgs) or '<p class="foot">No still in this part</p>',
+                     'line': ('&ldquo;%s&rdquo;' % line) if line else '<span class="muted">(no words in this part)</span>',
+                     'moves': moves, 'hear': hear})
     needs = cfg.get('needs') or []
-    if needs:
-        need_html = '<section class="needs"><h2>What I need from you</h2><ol>%s</ol><p>Each one has a placeholder in the preview, so you can still review everything now.</p></section>' % ''.join(
-            '<li><a href="#%s">%s</a> %s</li>' % (html.escape(n['beat']), html.escape(n['beat']), html.escape(n['what'])) for n in needs)
-    else:
-        need_html = '<section class="needs none"><h2>What I need from you</h2><p>Nothing. Everything this edit uses is already in hand.</p></section>'
-    page = TEMPLATE.replace('__TITLE__', html.escape((cfg.get('cover') or {}).get('title') or name)).replace('__NAME__', html.escape(name)) \
-        .replace('__ACCENT__', accent).replace('__FONT__', font).replace('__FONTQ__', font.replace(' ', '+')) \
-        .replace('__NEEDS__', need_html).replace('__ROWS__', ''.join(rows)).replace('__LEN__', tc(cfg['frames']))
-    open(os.path.join(out_dir, 'index.html'), 'w').write(page)
-    files = ['index.html'] + ['frames/' + f for f in sorted(os.listdir(fr_dir))]
-    json.dump(files, open(os.path.join(out_dir, 'files.json'), 'w'), indent=1)
-    print('storyboard: qa/%s/storyboard/index.html (%d beats, %d stills%s). Review it: python3 scripts/review_server.py %s'
+    title = (cfg.get('cover') or {}).get('title') or name.replace('-', ' ')
+    pane, local = page_bodies(title, tc(cfg['frames']), rows, needs)
+    adcamp_page.write(out_dir, html.escape(title), local, extra_css=STORYBOARD_CSS, pane_body=pane)
+    files = ['pane.html'] + ['frames/' + f for f in sorted(os.listdir(fr_dir))]
+    adcamp_page.files_map(out_dir, files[1:])
+    print('storyboard: qa/%s/storyboard/pane.html (%d parts, %d stills%s). In the Claude app publish pane.html with its frames '
+          '(files.json). Elsewhere: python3 scripts/review_server.py %s --until-done'
           % (name, len(rows), len(files) - 1, ', %d needs' % len(needs) if needs else '', name))
 
 
-TEMPLATE = '''<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>__TITLE__ storyboard</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=__FONTQ__:wght@400;600;800&display=swap" rel="stylesheet">
-<style>
-:root { --accent: __ACCENT__; --ink: #1b1c20; --muted: #5d5f68; --paper: #f6f4ef; --sheet: #ffffff; --hair: rgba(0,0,0,.1); }
-@media (prefers-color-scheme: dark) { :root { --ink: #ece9e2; --muted: #a3a29c; --paper: #131419; --sheet: #1b1d23; --hair: rgba(255,255,255,.1); } }
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--paper); color: var(--ink); font: 400 15px/1.55 "__FONT__", system-ui, sans-serif; padding: 28px 16px 96px; }
-.wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 22px; }
-.eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
-h1 { margin: 4px 0 0; font-size: clamp(30px, 6vw, 48px); line-height: 1.05; font-weight: 800; }
-.how { margin: 0; color: var(--muted); max-width: 64ch; }
-.needs { border: 2px solid var(--accent); border-radius: 10px; padding: 14px 16px; background: var(--sheet); }
-.needs.none { border-color: var(--hair); }
-.needs h2 { margin: 0 0 6px; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; }
-.needs ol { margin: 0 0 6px; padding-left: 20px; } .needs p { margin: 0; color: var(--muted); }
-.needs a { color: inherit; font-weight: 700; }
-.beat { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px; background: var(--sheet); border: 1px solid var(--hair); border-radius: 10px; padding: 16px; scroll-margin-top: 12px; }
-.beat:target { border-color: var(--accent); }
+def page_bodies(title, length, rows, needs):
+    """The storyboard's body twice: for the pane (a comment button per part, the Claude app's own comment loop) and
+    for a local tab (a note box per part, Save notes and Done)."""
+    words = html.escape(title).split(' ')
+    head = ' '.join(words[:-1]) + (' ' if len(words) > 1 else '') + '<span class="y">%s</span>' % words[-1]
+    if needs:
+        need = ('<section class="card need" id="needs" data-comment-target><p class="eyebrow">What I need from you</p><ol class="needs">%s</ol>'
+                '<p class="foot">Each one has a stand-in in the preview, so you can review everything now.</p></section>'
+                % ''.join('<li><a href="#%s">Part %s</a>: %s</li>' % (html.escape(str(n['beat'])), str(n['beat']).lstrip('b'), html.escape(n['what']))
+                          for n in needs))
+    else:
+        need = ('<section class="inner none" id="needs"><span class="eyebrow">What I need from you</span>'
+                '<span class="muted">Nothing. Everything this edit uses is already in hand.</span></section>')
+
+    def row(r, note):
+        return ('<section class="card lift beat" id="{id}" data-comment-target>'
+                '<div class="beat-head"><span class="chip">Part {n:02d}</span><span class="time">{a} to {b}</span></div>'
+                '<div class="beat-grid"><div class="frames">{imgs}</div><div class="beat-body"><p class="line">{line}</p>'
+                '<div class="cols"><div><p class="label">On screen</p><ul class="list">{moves}</ul></div>'
+                '<div><p class="label">You hear</p><ul class="list">{hear}</ul></div></div>{note}</div></div></section>').format(note=note, **r)
+
+    hero = ('{top}<header class="hero"><span class="eyebrow-pill">Nothing renders until you say go</span><h1>{head}</h1>'
+            '<p class="lede">{how}</p></header>{need}')
+    pane_how = ('Every part of your video, before a single frame renders. To change a part, press <b>Comment on this part</b>, '
+                'say what you want, and send it to Claude. When it all looks right, tell Claude to render it.')
+    local_how = ('Every part of your video, before a single frame renders. Leave a note on any part you want changed. '
+                 '<b>Save notes</b> keeps them as you go. Press <b>Done</b> when you have finished, and Claude takes it from there.')
+    top = adcamp_page.top('Video System', 'Storyboard &middot; %s' % length)
+    btn = '<div class="beat-act"><button type="button" class="btn btn-ghost" data-comment hidden>Comment on this part</button></div>'
+    pane = ('<main class="page">' + hero.format(top=top, head=head, how=pane_how, need=need)
+            + ''.join(row(r, btn) for r in rows)
+            + '<p class="foot end">Looks right? Tell Claude to render it. Want a change after that? Comment on the part here, '
+              'and the new version lands next to the first.</p></main>' + PANE_JS)
+    note = ('<label class="note"><span class="label">Note for part {n:02d}</span><textarea data-beat="{id}" rows="2" '
+            'placeholder="Anything to change here? Leave it blank if it looks good."></textarea></label>')
+    local = ('<main class="page">' + hero.format(top=top, head=head, how=local_how, need=need)
+             + ''.join(row(r, note.format(**r)) for r in rows) + '</main>'
+             + '<div class="bar"><span id="status" aria-live="polite"></span><button type="button" class="btn btn-ghost" id="save">Save notes</button>'
+               '<button type="button" class="btn btn-y" id="go">Done</button></div>' + LOCAL_JS)
+    return pane, local
+
+
+STORYBOARD_CSS = """
+.beat { scroll-margin-top: 16px; }
+.beat:target { border-color: var(--yellow); }
+.beat-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.time { font-size: 13px; color: var(--t-sub); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.beat-grid { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px; }
+.beat-grid > * { min-width: 0; }
 .frames { display: flex; gap: 8px; align-self: start; }
 figure { margin: 0; display: grid; gap: 4px; }
-figure img { display: block; width: 108px; height: auto; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 6px; border: 1px solid var(--hair); }
-figcaption { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.meta { margin: 0; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.id { display: inline-block; background: var(--accent); color: #111; font-weight: 800; border-radius: 4px; padding: 1px 7px; margin-right: 6px; }
-.line { margin: 6px 0 10px; font-size: 18px; font-weight: 600; line-height: 1.35; }
-.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-h3 { margin: 0 0 4px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-ul { margin: 0; padding-left: 18px; }
-.note { display: grid; gap: 4px; margin-top: 12px; }
-.note span { font-size: 12px; color: var(--muted); }
-textarea { width: 100%; font: inherit; color: inherit; background: var(--paper); border: 1px solid var(--hair); border-radius: 8px; padding: 8px 10px; resize: vertical; }
-textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; padding: 12px 16px; background: var(--sheet); border-top: 1px solid var(--hair); }
-button { font: 700 15px/1 "__FONT__", system-ui, sans-serif; border-radius: 999px; padding: 12px 20px; border: 1px solid var(--hair); background: var(--paper); color: var(--ink); cursor: pointer; }
-button.go { background: var(--accent); color: #111; border-color: transparent; }
-#status { font-size: 13px; color: var(--muted); min-width: 12ch; }
-@media (max-width: 680px) { .beat { grid-template-columns: 1fr; } .cols { grid-template-columns: 1fr; } figure img { width: 92px; } }
-@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
-</style>
-</head>
-<body>
-<main class="wrap">
-  <header>
-    <div class="eyebrow">Storyboard: __NAME__ (__LEN__)</div>
-    <h1>__TITLE__</h1>
-    <p class="how">Read it top to bottom. Leave a note on any beat you want changed, then press <b>Save notes</b>. When it all looks right, press <b>Looks good, render it</b>. Nothing renders until you do.</p>
-  </header>
-  __NEEDS__
-  __ROWS__
-</main>
-<div class="bar"><span id="status"></span><button type="button" id="save">Save notes</button><button type="button" class="go" id="go">Looks good, render it</button></div>
-<script>
+figure img { width: 104px; height: auto; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); background: var(--inner); }
+figcaption { font-size: 11px; color: var(--t-foot); font-variant-numeric: tabular-nums; }
+.beat-body { display: grid; gap: 14px; align-content: start; }
+.line { margin: 0; font-size: 19px; font-weight: 600; line-height: 1.4; max-width: 60ch; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.cols > * { min-width: 0; }
+.beat-act { display: flex; }
+ol.needs { margin: 0; padding-left: 20px; color: var(--t-body); display: grid; gap: 4px; }
+ol.needs a { color: var(--yellow); font-weight: 700; }
+.none { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.end { text-align: center; max-width: 60ch; justify-self: center; margin: 6px 0 0; }
+.note { display: grid; gap: 6px; }
+.bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap;
+  padding: 12px max(16px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  background: rgba(11,11,11,0.92); border-top: 1px solid var(--line); }
+#status { font-size: 13px; color: var(--t-sub); }
+@media (max-width: 700px) { .beat-grid { grid-template-columns: minmax(0, 1fr); } .cols { grid-template-columns: minmax(0, 1fr); } figure img { width: 92px; } }
+"""
+
+PANE_JS = """<script>
+// Each part's button opens the Claude app's own comment box on that part. The comment goes to Claude from there.
+(function () {
+  var tries = 0;
+  function start() {
+    if (!(window.claude && window.claude.use)) { if (++tries < 20) setTimeout(start, 250); return; }
+    window.claude.use('comments').then(function (c) {
+      if (!c) return;
+      document.querySelectorAll('[data-comment]').forEach(function (b) {
+        b.hidden = false;
+        b.addEventListener('click', function () {
+          c.openComposer({ element: b.closest('section') }).catch(function (e) {
+            if (e && (e.code === 'unavailable' || e.code === 'not_granted')) {
+              document.querySelectorAll('[data-comment]').forEach(function (x) { x.hidden = true; });
+            }
+          });
+        });
+      });
+    }).catch(function () {});
+  }
+  start();
+})();
+</script>"""
+
+LOCAL_JS = """<script>
 (function () {
   var status = document.getElementById('status');
   function collect() {
-    return Array.prototype.map.call(document.querySelectorAll('textarea[data-beat]'), function (t) { return { beat: t.dataset.beat, text: t.value.trim() }; })
-      .filter(function (n) { return n.text; });
+    // every box goes, empty ones too: an empty box clears that part's saved note
+    return Array.prototype.map.call(document.querySelectorAll('textarea[data-beat]'), function (t) { return { beat: t.dataset.beat, text: t.value.trim() }; });
   }
+  function count(notes) { return notes.filter(function (n) { return n.text; }).length; }
+  // a reopened page shows the notes already saved, so a Save never clears them by accident
+  fetch('notes.json', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : []; }).then(function (kept) {
+    kept.forEach(function (n) { var t = document.querySelector('textarea[data-beat="' + n.beat + '"]'); if (t && !t.value) t.value = n.text; });
+  }).catch(function () {});
   function send(notes, done) {
     fetch('notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(notes) })
       .then(function (r) { if (!r.ok) throw new Error(r.status); status.textContent = done; })
       .catch(function () { status.textContent = 'Could not save. Copy your notes into the chat instead.'; });
   }
   document.getElementById('save').addEventListener('click', function () {
-    var n = collect(); send(n, n.length ? 'Saved ' + n.length + ' note' + (n.length > 1 ? 's' : '') + '.' : 'No notes to save.');
+    var n = collect(), c = count(n); send(n, c ? 'Saved ' + c + ' note' + (c > 1 ? 's' : '') + '. Press Done when you are finished.' : 'Saved. No notes.');
   });
   document.getElementById('go').addEventListener('click', function () {
-    var n = collect(); n.push({ beat: 'all', text: 'go' }); send(n, 'Saved. Tell Claude it can render.');
+    var n = collect(), c = count(n); n.push({ beat: 'all', text: 'go' });
+    send(n, c ? 'Sent ' + c + ' note' + (c > 1 ? 's' : '') + ' to Claude. A new draft comes next.' : 'Done. Tell Claude in the chat to render it, and it makes the final video.');
   });
 })();
-</script>
-</body>
-</html>
-'''
+</script>"""
+
 
 if __name__ == '__main__':
     main()

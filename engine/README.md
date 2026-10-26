@@ -1,6 +1,6 @@
-# Distinguished Vertical Editor (engine folder)
+# AdCamp Video System (engine folder)
 
-Phone video + script in, finished 1080x1920 vertical video out, in one of three styles.
+Phone video + script in, finished 1080x1920 vertical video out, in your own look (a starter look or your own style).
 You don't run anything here by hand: in Claude Code, say "make a reel from my inbox".
 
 | Folder | What's in it |
@@ -12,10 +12,10 @@ You don't run anything here by hand: in Claude Code, say "make a reel from my in
 | `src/methodology/reels/` | one config per reel: scenes, captions, panels, style |
 | `qa/<name>/` | preview stills and checks |
 | `out/` | finished videos, phone copies, cover images and static ads |
-| `sounds/` | DVE's own whoosh, land and click (`sfx/`, yours to use), and your licensed music (optional) |
+| `sounds/` | AVS's own whoosh, land, click, impact, pop, ding and riser (`sfx/`, yours to use), and your licensed music (optional) |
 | `samples/` | the sample clip and script the install test (`../tools/smoke_test.sh`) builds |
 
-Look and feel: `src/brand.json` (accent color, sans font, serif font). Styles: `styles.json`.
+Look and feel: `src/brand.json` (accent color, sans font, serif font). Looks: `styles/` (the four starters and yours).
 Rules the engine follows: `CLAUDE.md`. Credits: `../CREDITS.md`.
 
 ## Pipeline

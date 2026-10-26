@@ -1,0 +1,50 @@
+{
+ "name": "Clean Talk",
+ "slug": "clean-talk",
+ "builtin": true,
+ "starter": true,
+ "order": 1,
+ "feel": "One word at a time in your brand color, low and clean, with a hook title over your head at the start. The everyday look.",
+ "base": "hype",
+ "captionStyle": "word",
+ "look": {
+  "captions": {
+   "case": "lower",
+   "size": 150,
+   "outline": 0,
+   "shadow": "soft",
+   "plate": "none",
+   "y": 1370,
+   "motion": "cut",
+   "color": "accent",
+   "keyColor": "accent",
+   "weight": 800
+  },
+  "backText": {
+   "over": true
+  }
+ },
+ "grade": {
+  "exposure": 1.02,
+  "contrast": 1.05,
+  "saturation": 1.0
+ },
+ "framing": {
+  "tight": 1.15
+ },
+ "zooms": "none",
+ "transitions": {
+  "first_join": "flash"
+ },
+ "transitions_allowed": [
+  "flash"
+ ],
+ "effects_allowed": [
+  "card",
+  "word-stamp",
+  "list-tracker",
+  "highlighter",
+  "page-scroll"
+ ],
+ "hook_title": true
+}

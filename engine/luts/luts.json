@@ -1,0 +1,37 @@
+[
+ {
+  "key": "natural",
+  "name": "Natural",
+  "line": "Your video as you shot it."
+ },
+ {
+  "key": "bright",
+  "name": "Bright and Clean",
+  "line": "Lifted and fresh. Skin stays true."
+ },
+ {
+  "key": "warm",
+  "name": "Warm",
+  "line": "Golden, like late afternoon light."
+ },
+ {
+  "key": "cool",
+  "name": "Cool",
+  "line": "Crisp and clear, a touch of blue."
+ },
+ {
+  "key": "soft-film",
+  "name": "Soft Film",
+  "line": "Faded blacks and gentle color, like film."
+ },
+ {
+  "key": "moody",
+  "name": "Moody",
+  "line": "Darker and quieter, with deep shadows."
+ },
+ {
+  "key": "cinematic",
+  "name": "Cinematic",
+  "line": "Steel blue shadows, rich contrast, true skin."
+ }
+]

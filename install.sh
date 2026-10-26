@@ -1,5 +1,5 @@
 #!/bin/bash
-# Distinguished Vertical Editor installer (macOS, Apple Silicon or Intel). No sudo, no Homebrew needed.
+# AdCamp Video System installer (macOS, Apple Silicon or Intel). No sudo, no Homebrew needed.
 #
 #   ./install.sh --step <name> [options]     run ONE step (Claude Code runs them in order, narrating each)
 #   ./install.sh --all [options]             run every step in order
@@ -15,12 +15,13 @@
 #   npm      the video renderer's packages into engine/node_modules          (~450 MB, 1-3 min)
 #   models   speech models into runtime/models                               (~1 GB)
 #   cutout   the person-cutout library (MediaPipe) + model into runtime/matte (~70 MB)
+#   ytdlp    the downloader for reels you want a style built from, into runtime/bin (~37 MB)
 #   browser  the headless Chrome the renderer draws with                     (~175 MB)
 #   brand    write engine/src/brand.json        --accent '#RRGGBB' --sans <name> --serif <name> [--handle @you --name 'Your Name' --avatar photo.jpg]
 #   env      write runtime/env.sh (the paths every script loads)
-#   skill    install the Claude Code skill "dve"   [--skill-dir DIR, default ~/.claude/skills]
+#   skill    install the Claude Code skill "avs"   [--skill-dir DIR, default ~/.claude/skills]
 #
-# Everything lives in this folder (~/DVE). tools/uninstall.sh removes it.
+# Everything lives in this folder (~/AVS). tools/uninstall.sh removes it.
 set -euo pipefail
 
 RE="$(cd "$(dirname "$0")" && pwd)"
@@ -53,6 +54,7 @@ mkdir -p "$RT/bin" "$RT/dl" "$RT/models"
 export PATH="$RT/node/bin:$RT/bin:$PATH"
 export UV_PYTHON_INSTALL_DIR="$RT/python" UV_CACHE_DIR="$RT/uv-cache"
 export HF_HOME="$RT/models/hf" TORCH_HOME="$RT/models/torch"
+export PYANNOTE_METRICS_ENABLED=0 HF_HUB_DISABLE_TELEMETRY=1   # no usage pings from the speech libraries
 case "$ARCH" in
   arm64) NODE_ARCH=arm64; FF_ARCH=arm64; UV_ARCH=aarch64; REQ=requirements-apple.txt;;
   x86_64) NODE_ARCH=x64; FF_ARCH=amd64; UV_ARCH=x86_64; REQ=requirements-intel.txt;;
@@ -71,9 +73,11 @@ ffmpeg_ok(){ command -v ffmpeg >/dev/null 2>&1 && command -v ffprobe >/dev/null 
 step_check(){
   say "check: this Mac"
   ok "chip: $ARCH ($([ "$ARCH" = arm64 ] && echo 'Apple Silicon' || echo 'Intel: slower, uses the Intel library set'))"
+  [ "$(sw_vers -productVersion | cut -d. -f1)" -ge 12 ] || die "macOS $(sw_vers -productVersion) is too old. AVS needs macOS 12 (Monterey) or newer."
   ok "macOS $(sw_vers -productVersion)"
   local free_gb; free_gb=$(df -g "$RE" | awk 'NR==2{print $4}')
-  [ "$free_gb" -ge 12 ] || die "only ${free_gb} GB free. DVE needs about 12 GB (3 GB of downloads plus working space)."
+  local need=12; [ -d "$RT/python" ] && need=6   # picking up a stopped install: the downloads already took their space
+  [ "$free_gb" -ge "$need" ] || die "only ${free_gb} GB free. AVS needs about $need GB free here (downloads plus working space)."
   ok "free disk: ${free_gb} GB"
   command -v curl >/dev/null || die "curl missing"
 }
@@ -117,7 +121,7 @@ step_uv(){
 }
 
 step_python(){
-  say "python: Python ${PY_VERSION} (private to DVE)"
+  say "python: Python ${PY_VERSION} (private to AVS)"
   uv python install "$PY_VERSION" --no-bin >/dev/null   # no shortcut in ~/.local/bin: everything stays in this folder
   local py; py="$(uv python find "$PY_VERSION")"
   ln -sf "$py" "$RT/bin/python3"
@@ -137,7 +141,10 @@ step_venv(){
 step_npm(){
   say "npm: the video renderer (Remotion) and its packages"
   node_ok || die "run the node step first"
-  ( cd "$ENG" && npm ci --no-audit --no-fund --loglevel=error )
+  if [ -d "$ENG/node_modules/remotion" ] && cmp -s "$ENG/package-lock.json" "$ENG/node_modules/.avs-lock"; then
+    ok "renderer packages already installed"; return   # same lock file as the last install: nothing to fetch
+  fi
+  ( cd "$ENG" && npm ci --no-audit --no-fund --loglevel=error && cp package-lock.json node_modules/.avs-lock )
   ok "renderer packages installed in engine/node_modules"
 }
 
@@ -154,6 +161,16 @@ whisperx.load_align_model(language_code='en', device='cpu'); print('  word-align
 whisperx.load_model('base', 'cpu', compute_type='int8'); print('  voice-activity model ready')
 PY
   ok "models cached in runtime/models"
+}
+
+step_ytdlp(){
+  say "ytdlp: the downloader that brings in reels you like, to build a style from them"
+  local v="2026.08.19" sum="0f192b7ec147ab6288885d6351d9ab67367640029b4377576ef46dd79cf7b202"
+  if [ -x "$RT/bin/yt-dlp" ]; then ok "yt-dlp $("$RT/bin/yt-dlp" --version 2>/dev/null) already in runtime/bin"; return; fi
+  fetch "https://github.com/yt-dlp/yt-dlp/releases/download/$v/yt-dlp_macos" "$RT/dl/yt-dlp"
+  [ "$(shasum -a 256 "$RT/dl/yt-dlp" | cut -d' ' -f1)" = "$sum" ] || { rm -f "$RT/dl/yt-dlp"; die "the yt-dlp download did not pass its checksum, so it was not used"; }
+  mv "$RT/dl/yt-dlp" "$RT/bin/yt-dlp"; chmod +x "$RT/bin/yt-dlp"
+  ok "yt-dlp $v in runtime/bin (checksum verified)"
 }
 
 step_cutout(){
@@ -184,7 +201,12 @@ step_brand(){
     mkdir -p "$ENG/public/inserts"
     "$RT/bin/python3" - "$AVATAR" "$ENG/public/inserts/avatar.png" <<'PY'
 import subprocess, sys
+import os, tempfile
 src, dst = sys.argv[1:3]
+if src.lower().endswith(('.heic', '.heif')):   # iPhone photos: macOS's own sips turns them into a plain image first
+    tmp = os.path.join(tempfile.mkdtemp(), 'photo.png')
+    subprocess.run(['sips', '-s', 'format', 'png', src, '--out', tmp], check=True, capture_output=True)
+    src = tmp
 # square crop from the middle, 400 px, PNG (the card draws it in a circle)
 subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', src, '-vf', "crop='min(iw,ih)':'min(iw,ih)',scale=400:400", '-frames:v', '1', dst], check=True)
 print('  photo saved as public/inserts/avatar.png')
@@ -203,6 +225,10 @@ if len(sys.argv) > 7 and sys.argv[7]:
 if accent:
     if not re.fullmatch(r'#?[0-9A-Fa-f]{6}', accent): sys.exit('  accent must be a hex color like #F7C715')
     b['accent'] = '#' + accent.lstrip('#').upper()
+    rgb = [int(b['accent'][i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    lin = [c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4 for c in rgb]
+    if 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2] < 0.15:
+        print('  note: a dark color. Words and graphics over your video and photos use a lighter shade of it so they stay readable. Light slides keep it exactly.')
 if sans:
     if sans not in ('hanken', 'inter', 'montserrat', 'dmsans', 'poppins'): sys.exit('  sans must be hanken, inter, montserrat, dmsans or poppins')
     b['sans'] = sans
@@ -219,25 +245,42 @@ step_env(){
   say "env: runtime/env.sh"
   local nodedir; nodedir="$(dirname "$(command -v node)")"
   cat > "$RT/env.sh" <<EOF
-# written by install.sh: every DVE script loads this
-export DVE_HOME="$RE"
+# written by install.sh: every AVS script loads this
+export AVS_HOME="$RE"
 export PATH="$nodedir:$RT/bin:\$PATH"
-export DVE_PYTHON="$RT/whisperx/bin/python"
-export DVE_MATTE_PYTHON="$RT/matte/bin/python"
-export DVE_MODELS="$RT/models/mediapipe"
+export AVS_PYTHON="$RT/whisperx/bin/python"
+export AVS_MATTE_PYTHON="$RT/matte/bin/python"
+export AVS_MODELS="$RT/models/mediapipe"
 export HF_HOME="$RT/models/hf"
 export TORCH_HOME="$RT/models/torch"
 export UV_PYTHON_INSTALL_DIR="$RT/python"
+export PYANNOTE_METRICS_ENABLED=0
+export HF_HUB_DISABLE_TELEMETRY=1
 EOF
   ok "runtime/env.sh written"
 }
 
 step_skill(){
-  say "skill: Claude Code skill \"dve\" -> $SKILL_DIR/dve"
-  mkdir -p "$SKILL_DIR/dve"
-  sed "s|{{DVE_HOME}}|$RE|g" "$RE/skill/dve/SKILL.md" > "$SKILL_DIR/dve/SKILL.md"
-  ok "skill installed. In a NEW Claude Code session, say: make a reel"
-  # DVE's own cue sounds arrived in an update: switch on any role that is empty, once. A role you turn
+  # the skill this package replaced (found by its folder and title) would answer "make a reel" too: it goes to the Trash
+  if grep -qs "Distinguished Vertical Editor" "$SKILL_DIR/dve/SKILL.md"; then
+    mkdir -p "$HOME/.Trash" && mv "$SKILL_DIR/dve" "$HOME/.Trash/dve-skill-$(date +%Y%m%d-%H%M%S)"
+    ok "moved an older video skill to the Trash, so only AVS answers \"make a reel\". It can be put back from the Trash, and no videos were touched"
+  fi
+  # an update from an older AVS runs ITS update script, which only knows the old steps but always ends here:
+  # anything a newer version added is filled in from this step
+  [ -x "$RT/bin/yt-dlp" ] || step_ytdlp
+  if [ -f "$RT/.via-plugin" ]; then
+    say "skill: comes from the AVS plugin"
+    # an older copy from a zip or prompt install would answer "make a reel" twice
+    grep -qs "AdCamp Video System" "$SKILL_DIR/avs/SKILL.md" && rm -rf "$SKILL_DIR/avs"
+    ok "the plugin provides the skill. In a NEW Claude Code session, say: make a reel"
+  else
+    say "skill: Claude Code skill \"avs\" -> $SKILL_DIR/avs"
+    mkdir -p "$SKILL_DIR/avs"
+    cp "$RE/skills/avs/SKILL.md" "$SKILL_DIR/avs/SKILL.md"
+    ok "skill installed. In a NEW Claude Code session, say: make a reel"
+  fi
+  # AVS's own cue sounds arrived in an update: switch on any role that is empty, once. A role you turn
   # off afterwards (null) stays off, because "_sfx_offered" remembers this already happened.
   "$RT/bin/python3" - "$ENG/sounds.json" <<'PY' || true
 import json, os, sys
@@ -257,11 +300,11 @@ for role, f in ALL:
 d['_sfx_offered'] = sorted(offered)
 json.dump(d, open(p, 'w'), indent=2)
 if on:
-    print('Sound effects switched on: %s (DVE\'s own sounds). Set a role to null in engine/sounds.json to turn one off.' % ', '.join(on))
+    print('Sound effects switched on: %s (AVS\'s own sounds). Set a role to null in engine/sounds.json to turn one off.' % ', '.join(on))
 PY
 }
 
-STEPS="check node ffmpeg uv python venv npm models cutout browser brand env skill"
+STEPS="check node ffmpeg uv python venv npm models cutout ytdlp browser brand env skill"
 if [ "$ALL" -eq 1 ]; then
   for s in $STEPS; do "step_$s"; done
 elif [ -n "$STEP" ]; then

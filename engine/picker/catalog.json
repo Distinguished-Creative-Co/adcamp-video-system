@@ -1,0 +1,321 @@
+{
+ "captions": [
+  {
+   "key": "lines",
+   "name": "Lines",
+   "line": "Short lines on a soft plate, the key word glowing.",
+   "preview": "previews/captions/lines.mp4",
+   "poster": "previews/captions/lines.jpg"
+  },
+  {
+   "key": "punch",
+   "name": "Punch",
+   "line": "One or two bold words at a time, outlined.",
+   "preview": "previews/captions/punch.mp4",
+   "poster": "previews/captions/punch.jpg"
+  },
+  {
+   "key": "dynamic",
+   "name": "Two-Font",
+   "line": "Plain capitals, with the key word huge in an italic font.",
+   "preview": "previews/captions/dynamic.mp4",
+   "poster": "previews/captions/dynamic.jpg"
+  },
+  {
+   "key": "word",
+   "name": "One Word",
+   "line": "One big word at a time, switching instantly.",
+   "preview": "previews/captions/word.mp4",
+   "poster": "previews/captions/word.jpg"
+  },
+  {
+   "key": "bigword",
+   "name": "Big Word",
+   "line": "The line small, its key word huge underneath.",
+   "preview": "previews/captions/bigword.mp4",
+   "poster": "previews/captions/bigword.jpg"
+  },
+  {
+   "key": "pill",
+   "name": "Pill",
+   "line": "Short phrases, the key word in a solid pill.",
+   "preview": "previews/captions/pill.mp4",
+   "poster": "previews/captions/pill.jpg"
+  },
+  {
+   "key": "editorial",
+   "name": "Editorial",
+   "line": "A small spaced-out line over one big italic word.",
+   "preview": "previews/captions/editorial.mp4",
+   "poster": "previews/captions/editorial.jpg"
+  },
+  {
+   "key": "steps",
+   "name": "Steps",
+   "line": "Words step down the frame like stairs.",
+   "preview": "previews/captions/steps.mp4",
+   "poster": "previews/captions/steps.jpg"
+  }
+ ],
+ "effects": [
+  {
+   "key": "word-stamp",
+   "name": "Word Stamp",
+   "line": "One spoken word stamped on screen.",
+   "preview": "previews/effects/word-stamp.mp4",
+   "poster": "previews/effects/word-stamp.jpg"
+  },
+  {
+   "key": "giant-captions",
+   "name": "Giant Words",
+   "line": "Your words huge, one at a time.",
+   "preview": "previews/effects/giant-captions.mp4",
+   "poster": "previews/effects/giant-captions.jpg"
+  },
+  {
+   "key": "icon-strike",
+   "name": "Icon Strike",
+   "line": "A crossed-out icon when you say no to something.",
+   "preview": "previews/effects/icon-strike.mp4",
+   "poster": "previews/effects/icon-strike.jpg"
+  },
+  {
+   "key": "page-scroll",
+   "name": "Page Scroll",
+   "line": "Your web page scrolling by. Needs a screenshot from you.",
+   "preview": "previews/effects/page-scroll.mp4",
+   "poster": "previews/effects/page-scroll.jpg"
+  },
+  {
+   "key": "live-markup",
+   "name": "Live Markup",
+   "line": "A circle drawn on your screenshot. Needs a screenshot from you.",
+   "preview": "previews/effects/live-markup.mp4",
+   "poster": "previews/effects/live-markup.jpg"
+  },
+  {
+   "key": "keycaps",
+   "name": "Keycaps",
+   "line": "Keys typing out your keyword, like SITE.",
+   "preview": "previews/effects/keycaps.mp4",
+   "poster": "previews/effects/keycaps.jpg"
+  },
+  {
+   "key": "receipt",
+   "name": "Receipt",
+   "line": "A short list printing line by line.",
+   "preview": "previews/effects/receipt.mp4",
+   "poster": "previews/effects/receipt.jpg"
+  },
+  {
+   "key": "intertitle",
+   "name": "Title Card",
+   "line": "A short title card with a few of your words.",
+   "preview": "previews/effects/intertitle.mp4",
+   "poster": "previews/effects/intertitle.jpg"
+  },
+  {
+   "key": "counter",
+   "name": "Big Number",
+   "line": "One big number you said, with a label.",
+   "preview": "previews/effects/counter.mp4",
+   "poster": "previews/effects/counter.jpg"
+  },
+  {
+   "key": "pie",
+   "name": "Pie",
+   "line": "A pie that fills to the share you said.",
+   "preview": "previews/effects/pie.mp4",
+   "poster": "previews/effects/pie.jpg"
+  },
+  {
+   "key": "list-tracker",
+   "name": "List Tracker",
+   "line": "A header that counts through your list and stays up.",
+   "preview": "previews/effects/list-tracker.mp4",
+   "poster": "previews/effects/list-tracker.jpg"
+  },
+  {
+   "key": "snap-zoom",
+   "name": "Snap Zoom",
+   "line": "A slow push in, then a quick snap on your most important word.",
+   "preview": "previews/effects/snap-zoom.mp4",
+   "poster": "previews/effects/snap-zoom.jpg"
+  },
+  {
+   "key": "quote-card",
+   "name": "Quote Card",
+   "line": "Words someone said, typed out in quotes.",
+   "preview": "previews/effects/quote-card.mp4",
+   "poster": "previews/effects/quote-card.jpg"
+  },
+  {
+   "key": "pinned-line",
+   "name": "Pinned Line",
+   "line": "One short line pinned at the top the whole time.",
+   "preview": "previews/effects/pinned-line.mp4",
+   "poster": "previews/effects/pinned-line.jpg"
+  },
+  {
+   "key": "cover-story",
+   "name": "Cover Story",
+   "line": "Your opening as a magazine cover.",
+   "preview": "previews/effects/cover-story.mp4",
+   "poster": "previews/effects/cover-story.jpg"
+  },
+  {
+   "key": "highlighter",
+   "name": "Highlighter",
+   "line": "A highlighter sweeps a line on your screenshot. Needs a screenshot from you.",
+   "preview": "previews/effects/highlighter.mp4",
+   "poster": "previews/effects/highlighter.jpg"
+  },
+  {
+   "key": "glass-word",
+   "name": "Glass Word",
+   "line": "A huge frosted-glass word behind you.",
+   "preview": "previews/effects/glass-word.mp4",
+   "poster": "previews/effects/glass-word.jpg"
+  },
+  {
+   "key": "note-wall",
+   "name": "Note Wall",
+   "line": "Paper notes with your words stick up around you.",
+   "preview": "previews/effects/note-wall.mp4",
+   "poster": "previews/effects/note-wall.jpg"
+  },
+  {
+   "key": "arrow-note",
+   "name": "Arrow Note",
+   "line": "A handwritten note with an arrow pointing at something.",
+   "preview": "previews/effects/arrow-note.mp4",
+   "poster": "previews/effects/arrow-note.jpg"
+  },
+  {
+   "key": "comment-box",
+   "name": "Comment Box",
+   "line": "Your keyword types into a comment and a heart pops.",
+   "preview": "previews/effects/comment-box.mp4",
+   "poster": "previews/effects/comment-box.jpg"
+  },
+  {
+   "key": "giant-number",
+   "name": "Giant Number",
+   "line": "Your list number fills the screen with a pop, covering you for about half a second.",
+   "preview": "previews/effects/giant-number.mp4",
+   "poster": "previews/effects/giant-number.jpg"
+  }
+ ],
+ "transitions": [
+  {
+   "key": "flash",
+   "name": "Flash",
+   "line": "A warm bright flash on the cut.",
+   "preview": "previews/transitions/flash.mp4",
+   "poster": "previews/transitions/flash.jpg"
+  },
+  {
+   "key": "whip",
+   "name": "Whip",
+   "line": "A fast sideways whip with blur.",
+   "preview": "previews/transitions/whip.mp4",
+   "poster": "previews/transitions/whip.jpg"
+  },
+  {
+   "key": "zoom",
+   "name": "Zoom",
+   "line": "A quick zoom through the cut.",
+   "preview": "previews/transitions/zoom.mp4",
+   "poster": "previews/transitions/zoom.jpg"
+  },
+  {
+   "key": "spin",
+   "name": "Spin",
+   "line": "A small spin through the cut.",
+   "preview": "previews/transitions/spin.mp4",
+   "poster": "previews/transitions/spin.jpg"
+  },
+  {
+   "key": "iris",
+   "name": "Iris",
+   "line": "A ring closes on you and opens again.",
+   "preview": "previews/transitions/iris.mp4",
+   "poster": "previews/transitions/iris.jpg"
+  },
+  {
+   "key": "bars",
+   "name": "Bars",
+   "line": "Bars wipe across between shots.",
+   "preview": "previews/transitions/bars.mp4",
+   "poster": "previews/transitions/bars.jpg"
+  }
+ ],
+ "styles": [
+  {
+   "key": "clean-talk",
+   "name": "Clean Talk",
+   "line": "One word at a time in your brand color, low and clean, with a hook title over your head at the start. The everyday look.",
+   "preview": "previews/styles/clean-talk.mp4",
+   "poster": "previews/styles/clean-talk.jpg"
+  },
+  {
+   "key": "big-energy",
+   "name": "Big Energy",
+   "line": "Bold one-or-two-word captions, zoom punches and big words. Fast and loud.",
+   "preview": "previews/styles/big-energy.mp4",
+   "poster": "previews/styles/big-energy.jpg"
+  },
+  {
+   "key": "soft-story",
+   "name": "Soft Story",
+   "line": "Calm and warm: words that step down softly, the key word in your second font, gentle moves. For stories and trust.",
+   "preview": "previews/styles/soft-story.mp4",
+   "poster": "previews/styles/soft-story.jpg"
+  },
+  {
+   "key": "show-and-tell",
+   "name": "Show and Tell",
+   "line": "Clear captions on a dark strip plus graphics for your numbers, lists and screenshots. For teaching and ads.",
+   "preview": "previews/styles/show-and-tell.mp4",
+   "poster": "previews/styles/show-and-tell.jpg"
+  }
+ ],
+ "fonts": [
+  {
+   "key": "pair-1",
+   "name": "Clean and editorial",
+   "line": "Hanken Grotesk, with Playfair for key words.",
+   "sans": "hanken",
+   "serif": "playfair",
+   "preview": "previews/fonts/pair-1.mp4",
+   "poster": "previews/fonts/pair-1.jpg"
+  },
+  {
+   "key": "pair-2",
+   "name": "Light and airy",
+   "line": "Inter, with Instrument Serif for key words.",
+   "sans": "inter",
+   "serif": "instrument",
+   "preview": "previews/fonts/pair-2.mp4",
+   "poster": "previews/fonts/pair-2.jpg"
+  },
+  {
+   "key": "pair-3",
+   "name": "Bold and warm",
+   "line": "Montserrat, with Fraunces for key words.",
+   "sans": "montserrat",
+   "serif": "fraunces",
+   "preview": "previews/fonts/pair-3.mp4",
+   "poster": "previews/fonts/pair-3.jpg"
+  },
+  {
+   "key": "pair-4",
+   "name": "Modern and friendly",
+   "line": "DM Sans, with DM Serif for key words.",
+   "sans": "dmsans",
+   "serif": "dmserif",
+   "preview": "previews/fonts/pair-4.mp4",
+   "poster": "previews/fonts/pair-4.jpg"
+  }
+ ]
+}

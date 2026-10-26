@@ -1,10 +1,9 @@
 {
-  "_about": "Named reel styles. Say \"make this in <style>\": Studio is the full build (scripts/make_reel.sh); scripts/make_style.py <base> <minimal|hype> builds a variant from the same cut. Every variant needs its own preview approval before render.",
+  "_about": "The engine's three base builds. Members never pick these by name: their looks (the starter looks in styles/, or their own) are built on them by scripts/make_style.py. studio is the cards-and-panels build, minimal and hype are full screen.",
   "styles": {
     "studio": {
       "what": "The full build: full-screen and glass-card window scenes, panel swaps (proof shot, stat, CTA card), back text, inserts (follow card, your clips), effects and transitions, cover title, line captions.",
-      "built_by": "scripts/make_reel.sh (the default workflow)",
-      "example": "sample"
+      "built_by": "scripts/make_reel.sh (the default workflow)"
     },
     "minimal": {
       "what": "Strict captions only: full screen throughout, punch captions (1-2 words, bold), punch-in open and zooms allowed, no overlays outside captions (no panels, no back text, no cover title).",
@@ -18,8 +17,7 @@
         "thumbnail": "drop",
         "inserts": "drop",
         "effects": "camera transitions only"
-      },
-      "example": "sample-minimal"
+      }
     },
     "hype": {
       "what": "Trendy: full screen throughout, dynamic two-font captions (white caps in the house sans plus each line's key word in yellow Playfair italic, popping on word by word), zoom punch-ins on key words, back text kept, cover kept.",
@@ -34,8 +32,7 @@
         "thumbnail": "drop",
         "inserts": "keep",
         "effects": "keep"
-      },
-      "example": "sample-hype"
+      }
     }
   }
 }

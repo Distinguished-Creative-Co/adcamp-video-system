@@ -61,6 +61,41 @@ export const GOLD = {
   label: ENGINE.brand.label,
 } as const;
 
+/** The brand accent as text over footage: a dark brand color (navy, forest green, black) is lifted toward white until
+ *  it reads on any shot. A bright accent comes back unchanged. */
+const lum = (rgb: number[]) => {
+  const l = rgb.map((v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
+  return 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2];
+};
+const readable = (hex: string): string => {
+  const base = hexToRgb(hex).split(',').map(Number);
+  if (lum(base) >= 0.15) return hex;   // mid and bright colors (red, orange, green, yellow) read with the shadow as they are
+  for (let t = 0; t <= 1.0001; t += 0.05) {
+    const c = base.map((v) => Math.round(v + (255 - v) * t));
+    if (lum(c) >= 0.5) return t === 0 ? hex : '#' + c.map((v) => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+  }
+  return '#FFFFFF';
+};
+export const ACCENT_ON_FOOTAGE = readable(GOLD.yellow);
+/** Text on a fill of the exact brand accent (a light-stage highlight, a funnel's last stage, a picked option): the house
+ *  dark ink, or white when the brand color is dark. */
+export const INK_ON_ACCENT = lum(hexToRgb(GOLD.yellow).split(',').map(Number)) < 0.35 ? '#FFFFFF' : GOLD.ink;
+/** Any accent as text on a dark surface (footage, an ink card): lifted when it is too dark to read. */
+export const readableAccent = (hex: string): string => readable(hex);
+/** The mark on a solid accent fill (a highlight box, a tick, a pill): dark on a light accent, white on a dark one. */
+export const inkOn = (hex: string): string => (lum(hexToRgb(hex).split(',').map(Number)) < 0.35 ? '#FFFFFF' : '#141414');
+
+/** A look color: "accent" is the member's brand accent (so a starter look carries their brand), else #RRGGBB. Text
+ *  over footage passes through ACCENT_ON_FOOTAGE so a dark brand color stays readable. */
+export const lookColor = (c: string | undefined, fallback: string): string =>
+  c === 'accent' ? ACCENT_ON_FOOTAGE : c ?? (fallback === GOLD.yellow ? ACCENT_ON_FOOTAGE : fallback);
+
+/** A dollar amount as one caption word: $200, $1,200, $49.99, $5k, $20,000+, $199/month, "$200", ($200). Trailing punctuation allowed. */
+export const MONEY = /^["\u201c(]?\$\d[\d,]*(\.\d+)?[kKmMbB]?\+?(\/(mo|month|yr|year|wk|week|hr|hour))?[.,!?;:"\u201d)]*$/;
+/** The look's money color for a caption word that is a dollar amount, else undefined. Off unless a look sets captions.money. */
+export const moneyColor = (t: string, look?: { money?: string }): string | undefined =>
+  look?.money && MONEY.test(t.trim()) ? lookColor(look.money, look.money) : undefined;
+
 export const Z = { base: 0, broll: 10, sideFill: 20, avatar: 30, over: 40, card: 50, fade: 90 } as const;
 
 /** Seconds to frames at the engine rate. */

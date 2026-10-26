@@ -1,6 +1,6 @@
 import React from 'react';
 import { spring, useCurrentFrame, useVideoConfig } from 'remotion';
-import { ACCENT_RGB, CREME_DARK, GOLD } from '../vc/style';
+import { ACCENT_RGB, CREME_DARK, GOLD, ACCENT_ON_FOOTAGE, INK_ON_ACCENT } from '../vc/style';
 import { SANS } from '../vc/fonts';
 import { ENTER_F, LEAD_F } from '../../methodology/layout';
 import type { SwapContent } from '../../methodology/ReelConfig';
@@ -22,7 +22,7 @@ const useEnter = () => {
 
 const Check: React.FC<{ p: number; size: number }> = ({ p, size }) => (
   <svg width={size} height={size} viewBox="0 0 40 40" style={{ flexShrink: 0 }}>
-    <circle cx={20} cy={20} r={18} stroke={GOLD.yellow} strokeWidth={2.5} fill={p > 0.5 ? GOLD.yellow : 'none'} opacity={0.4 + 0.6 * p} />
+    <circle cx={20} cy={20} r={18} stroke={ACCENT_ON_FOOTAGE} strokeWidth={2.5} fill={p > 0.5 ? ACCENT_ON_FOOTAGE : 'none'} opacity={0.4 + 0.6 * p} />
     <path d="M12 21 L18 27 L29 14" fill="none" stroke={GOLD.ink} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round"
       pathLength={1} strokeDasharray={1} strokeDashoffset={1 - clamp01((p - 0.4) / 0.6)} />
   </svg>
@@ -69,8 +69,8 @@ const Funnel: React.FC<{ stages: { t: string; value?: string }[]; cues: number[]
             width: width * (1 - (0.42 * i) / Math.max(n - 1, 1)), display: 'flex', alignItems: 'center',
             justifyContent: 'space-between', opacity: p, transform: `scaleX(${0.86 + 0.14 * p})`,
           }}>
-            <div style={label(42, 700, last ? GOLD.ink : CREME_DARK.ink, { whiteSpace: 'nowrap' })}>{st.t}</div>
-            {st.value ? <div style={label(44, 800, last ? GOLD.ink : GOLD.yellow, { whiteSpace: 'nowrap' })}>{st.value}</div> : null}
+            <div style={label(42, 700, last ? INK_ON_ACCENT : CREME_DARK.ink, { whiteSpace: 'nowrap' })}>{st.t}</div>
+            {st.value ? <div style={label(44, 800, last ? INK_ON_ACCENT : ACCENT_ON_FOOTAGE, { whiteSpace: 'nowrap' })}>{st.value}</div> : null}
           </div>
         );
       })}
@@ -101,7 +101,7 @@ const Decision: React.FC<{ question?: string; options: { t: string }[]; pick: nu
             ) : (
               <div style={{ width: 54, height: 54, borderRadius: '50%', boxSizing: 'border-box', border: '2.5px solid rgba(255,255,255,0.35)', flexShrink: 0 }} />
             )}
-            <div style={label(46, 700, picked && q > 0.5 ? GOLD.ink : CREME_DARK.ink)}>{op.t}</div>
+            <div style={label(46, 700, picked && q > 0.5 ? INK_ON_ACCENT : CREME_DARK.ink)}>{op.t}</div>
           </div>
         );
       })}

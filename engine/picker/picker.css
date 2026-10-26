@@ -1,0 +1,42 @@
+/* The Picker on the AdCamp kit (scripts/adcamp_page.py): cards that play, one yellow for what is picked. */
+.ways { display: inline-flex; background: var(--inner); border: 1px solid var(--line); border-radius: var(--r-pill); padding: 4px; gap: 4px; }
+.ways button { border: 0; background: transparent; color: var(--t-sub); font: 800 13px/1 var(--f-body); letter-spacing: 0.08em; text-transform: uppercase; padding: 12px 18px; border-radius: var(--r-pill); cursor: pointer; }
+.ways button[aria-pressed="true"] { background: var(--yellow); color: var(--ink); }
+.pick-sec { display: grid; gap: 6px; padding-top: 10px; }
+.pick-sec .note { color: var(--t-sub); margin: 0 0 8px; font-size: 15px; max-width: 70ch; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 14px; }
+.grid > * { min-width: 0; }
+.pcard { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-card); overflow: hidden; cursor: pointer; display: flex; flex-direction: column; transition: border-color .2s ease, box-shadow .2s ease; }
+.pcard:hover { border-color: rgba(255,208,0,0.6); }
+.pcard.on { border-color: var(--yellow); box-shadow: 0 0 0 1px var(--yellow), 0 14px 40px rgba(255,208,0,0.18); }
+.pcard input { position: absolute; opacity: 0; pointer-events: none; }
+.pcard:has(input:focus-visible) { outline: 3px solid var(--yellow); outline-offset: 3px; }
+.shot { position: relative; aspect-ratio: 9 / 16; background: var(--inner); }
+.shot video, .shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.shot .blank { position: absolute; inset: 0; display: grid; place-items: center; color: var(--t-sub); font-weight: 700; font-size: 15px; text-align: center; padding: 12px; }
+.play { position: absolute; right: 8px; bottom: 8px; width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(0,0,0,0.65); color: #fff; cursor: pointer; display: grid; place-items: center; }
+.tick { position: absolute; left: 8px; top: 8px; width: 28px; height: 28px; border-radius: 50%; background: rgba(0,0,0,0.5); border: 2px solid #fff; display: grid; place-items: center; color: var(--ink); }
+.pcard.on .tick { background: var(--yellow); border-color: var(--yellow); }
+.tick svg { width: 16px; height: 16px; opacity: 0; }
+.pcard.on .tick svg { opacity: 1; }
+.meta { padding: 10px 12px 12px; display: grid; gap: 2px; justify-items: start; }
+.name { font-family: var(--f-display); font-size: 20px; line-height: 1.05; text-transform: uppercase; letter-spacing: 0.01em; }
+.line { color: var(--t-sub); font-size: 13px; line-height: 1.4; }
+.tag { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink); background: var(--yellow); border-radius: 6px; padding: 3px 7px; margin-top: 6px; }
+.parts { display: none; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.partson .pcard.on .parts { display: flex; }
+.parts button { border: 1px solid var(--line-2); background: transparent; color: var(--t-white); border-radius: var(--r-pill); font: 700 12px var(--f-body); padding: 5px 10px; cursor: pointer; }
+.parts button[aria-pressed="true"] { background: var(--yellow); color: var(--ink); border-color: var(--yellow); }
+.switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; color: var(--t-body); margin: 0 0 8px; }
+.switch input { width: 20px; height: 20px; accent-color: var(--yellow); }
+.pbar { position: sticky; bottom: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 14px 18px calc(14px + env(safe-area-inset-bottom, 0px)); background: rgba(11,11,11,0.94); border: 1px solid var(--line); border-radius: var(--r-card); }
+.sum { font-weight: 700; }
+.sum small { display: block; color: var(--t-sub); font-weight: 500; }
+.done { display: none; }
+.done.show { display: grid; gap: 6px; }
+.done h2 { color: var(--yellow); }
+.done p { margin: 0; color: var(--t-body); }
+.err { color: #FF8A7A; font-weight: 700; }
+@media (max-width: 520px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .name { font-size: 17px; } }
+@media (prefers-reduced-motion: reduce) { .pcard { transition: none; } }

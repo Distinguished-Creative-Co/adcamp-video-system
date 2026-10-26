@@ -1,0 +1,41 @@
+{
+ "name": "Soft Story",
+ "slug": "soft-story",
+ "builtin": true,
+ "starter": true,
+ "order": 3,
+ "feel": "Calm and warm: words that step down softly, the key word in your second font, gentle moves. For stories and trust.",
+ "base": "hype",
+ "captionStyle": "steps",
+ "look": {
+  "captions": {
+   "shadow": "soft",
+   "motion": "rise",
+   "size": 160
+  }
+ },
+ "grade": {
+  "exposure": 1.03,
+  "contrast": 0.98,
+  "saturation": 0.96,
+  "warmth": 0.06
+ },
+ "framing": {
+  "tight": 1.1
+ },
+ "zooms": "none",
+ "transitions": {
+  "first_join": "iris"
+ },
+ "transitions_allowed": [
+  "iris"
+ ],
+ "effects_allowed": [
+  "cover-story",
+  "quote-card",
+  "pinned-line",
+  "arrow-note",
+  "note-wall"
+ ],
+ "hook_title": false
+}

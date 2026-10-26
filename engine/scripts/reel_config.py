@@ -52,6 +52,24 @@ def load(name):
     return json.loads(_strip_comments(m.group(1)))
 
 
+def host_file(cfg, hi=False):
+    """The host picture the render draws, under public/: the color-graded copy (scripts/color_lut.py) when the config
+    names a color look and that copy exists, else the cut itself. hi: the full-resolution twin, or None."""
+    src = cfg['src']
+    base = src[:-len('-cut.mp4')] if src.endswith('-cut.mp4') else None
+    graded = (cfg.get('color') or 'natural') != 'natural' and base is not None
+    if hi:
+        if base is None:
+            return None
+        for f in ([base + '-cut-hi-c.mp4'] if graded else [base + '-cut-hi.mp4']):
+            if os.path.exists(os.path.join(ROOT, 'public', f)):
+                return f
+        return None
+    if graded and os.path.exists(os.path.join(ROOT, 'public', base + '-cut-c.mp4')):
+        return base + '-cut-c.mp4'
+    return src
+
+
 def stem(cfg):
     """The cut a reel uses: host/<stem>-cut.mp4. Variants of one cut share a stem but not a name."""
     b = os.path.basename(cfg['src'])
@@ -125,21 +143,25 @@ def timeline_errors(cfg):
     shown += [th.get('back', ''), th.get('front', '')]
     shown += [b.get('label') or '' for b in cfg.get('inserts') or [] if b.get('kind') == 'clip']
     for e in cfg.get('effects') or []:   # every word an effect puts on screen
-        shown += [str(e.get(k) or '') for k in ('word', 'label', 'keys', 'text', 'value', 'title', 'url')]
+        shown += [str(e.get(k) or '').replace('==', '') for k in ('word', 'label', 'keys', 'text', 'value', 'title', 'url', 'headline', 'sub', 'callout', 'who', 'strap', 'keyword', 'lead')]
+        shown += [str(x) for x in e.get('lines') or []] + [n.get('t', '') for n in e.get('notes') or []]
+        shown += [it.get('t', '') for it in e.get('items') or []]
         if e.get('kind') == 'pie' and not e.get('value'):
             shown.append('%s%%' % e.get('pct'))
         shown += ['%s %s' % (l.get('t', ''), l.get('value') or '') for l in e.get('lines') or []]
     said = set(re.sub(r"[^a-z0-9']", '', w['t'].lower().replace('\u2019', "'")) for w in words)
-    for b in (cfg.get('backText') or []) + ([{'text': th['back']}] if th.get('back') else []):
+    # member installs (AVS_HOME set) have no claims guard: what they put on screen is theirs to say (Chris, 2026-10-25)
+    guard = not os.environ.get('AVS_HOME')
+    for b in ((cfg.get('backText') or []) + ([{'text': th['back']}] if th.get('back') else [])) if guard else []:
         for t in b['text'].split():
             if re.sub(r"[^a-z0-9']", '', t.lower().replace('\u2019', "'")) not in said:
                 errs.append('back text "%s": "%s" is never spoken in the reel' % (b['text'], t))
-    for e in cfg.get('effects') or []:
+    for e in (cfg.get('effects') or []) if guard else []:
         if e.get('kind') == 'word-stamp':
             t = re.sub(r"[^a-z0-9']", '', e['word'].lower().replace('\u2019', "'"))
             if t and t not in said:
                 errs.append('word-stamp "%s" is never spoken in the reel' % e['word'])
-    for txt in shown:
+    for txt in shown if guard else []:
         for n in re.findall(r'\d+', txt):
             if n not in spoken:
                 errs.append('number "%s" on screen ("%s") is never spoken in the reel' % (n, txt[:60]))

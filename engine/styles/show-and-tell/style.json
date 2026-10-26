@@ -1,0 +1,46 @@
+{
+ "name": "Show and Tell",
+ "slug": "show-and-tell",
+ "builtin": true,
+ "starter": true,
+ "order": 4,
+ "feel": "Clear captions on a dark strip plus graphics for your numbers, lists and screenshots. For teaching and ads.",
+ "base": "hype",
+ "captionStyle": "lines",
+ "look": {
+  "captions": {
+   "plate": "dark",
+   "shadow": "none",
+   "motion": "pop"
+  }
+ },
+ "grade": {
+  "exposure": 1.02,
+  "contrast": 1.04,
+  "saturation": 1.0
+ },
+ "framing": {
+  "tight": 1.12
+ },
+ "zooms": "none",
+ "transitions": {
+  "first_join": "zoom"
+ },
+ "transitions_allowed": [
+  "zoom",
+  "flash"
+ ],
+ "effects_allowed": [
+  "list-tracker",
+  "counter",
+  "pie",
+  "receipt",
+  "card",
+  "page-scroll",
+  "live-markup",
+  "highlighter",
+  "pinned-line",
+  "comment-box"
+ ],
+ "hook_title": true
+}

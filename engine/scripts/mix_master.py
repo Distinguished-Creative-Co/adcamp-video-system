@@ -3,7 +3,7 @@
 
     python3 scripts/mix_master.py <name> out/<name>-picture.mp4 out/<name>.mp4
 
-One audio path (a method learned from the course the engine grew out of): narration comes straight
+One audio path (a method learned from the AI Video Editor course, see CREDITS): narration comes straight
 from the approved cut, never through the browser, so it cannot drift or double. Sound
 effects come only from sounds.json roles the creator supplied; null roles are recorded as
 unassigned and skipped. Cues are derived from the config, one per real event:
@@ -144,6 +144,23 @@ def effect_cues(e):
         return [{'role': 'insert_pop', 'frame': f, 'why': 'receipt line'} for f in (e.get('lineAt') or [])]
     if k in ('page-scroll', 'live-markup', 'intertitle', 'counter', 'pie'):
         return [{'role': 'transition_whoosh' if k in ('page-scroll', 'intertitle') else 'insert_pop', 'frame': a, 'why': '%s in' % k}]
+    if k in ('list-tracker', 'note-wall'):
+        return [{'role': 'element_land', 'frame': it['at'], 'why': '%s item' % k} for it in (e.get('items') or e.get('notes') or [])]
+    if k == 'snap-zoom':
+        return [{'role': 'back_text_hit', 'frame': e['at'], 'why': 'snap zoom'}]
+    if k == 'giant-number':
+        return [{'role': 'back_text_hit', 'frame': a + 4, 'why': 'giant number %s slams in' % e.get('value', '')}]
+    if k in ('quote-card', 'pinned-line', 'highlighter', 'arrow-note'):
+        return [{'role': 'insert_pop', 'frame': a, 'why': '%s in' % k}]
+    if k == 'cover-story':
+        return [{'role': 'back_text_hit', 'frame': a + 6, 'why': 'cover story'}]
+    if k == 'comment-box':
+        kw = e.get('keyword') or ''
+        return ([{'role': 'state_change', 'frame': a + 10 + 4 * i, 'why': 'key %d' % (i + 1)} for i in range(len(kw))]
+                + [{'role': 'cta_ding', 'frame': a + 14 + 4 * len(kw), 'why': 'comment sent'}])
+    if k == 'card':
+        return ([{'role': 'transition_whoosh', 'frame': a, 'why': 'card in'}]
+                + [{'role': 'element_land', 'frame': it['at'], 'why': 'card item'} for it in e.get('items') or [] if it.get('at') is not None])
     if k in ('transition',):
         return [{'role': 'transition_whoosh', 'frame': a, 'why': 'transition: %s' % e.get('style', '')}]
     return []
@@ -162,7 +179,7 @@ def main():
     filters = ['[0:a]aresample=48000,aformat=channel_layouts=stereo[v]']
     labels = ['[v]']
     resolved = []
-    cues = derive_cues(cfg)
+    cues = derive_cues(cfg) if cfg.get('sfx') is not False else []   # a style can ask for no cue sounds
     means = {}
     # peaks.json (scripts/make_sounds.py): when a sound is loudest. It starts that much early so its
     # loudest moment lands on the frame of the event, not its first sample. Your own files: add them there
@@ -223,7 +240,7 @@ def main():
             json.dump(log, open(log_p, 'w'), indent=1)
     filters.append('%samix=inputs=%d:normalize=0:dropout_transition=0,atrim=duration=%.3f[mix]'
                    % (''.join(labels), len(labels), duration))
-    qa = os.path.join(ROOT, 'qa', name)
+    qa = os.path.join(ROOT, 'qa', name, os.environ.get('MIX_QA_SUB', ''))   # a review draft keeps its records apart
     os.makedirs(qa, exist_ok=True)
     mix = os.path.join(qa, 'mix.wav')
     subprocess.run(inputs + ['-filter_complex', ';'.join(filters), '-map', '[mix]', '-c:a', 'pcm_s24le', mix], check=True)

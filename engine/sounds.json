@@ -1,5 +1,5 @@
 {
-  "_about": "Sound roles for every reel. whoosh, land, click, impact, pop, ding and riser are DVE's own sounds, synthesized by scripts/make_sounds.py: yours to use anywhere. Swap a role for your own licensed file, or set it to null for no sound. music_beds: YOUR licensed beds (paths under sounds/music/), ducked under the voice. music_under_voice_lu: how far the bed sits under the voice.",
+  "_about": "Sound roles for every reel. whoosh, land, click, impact, pop, ding and riser are AVS's own sounds, synthesized by scripts/make_sounds.py: yours to use anywhere. Swap a role for your own licensed file, or set it to null for no sound. music_beds: YOUR licensed beds (paths under sounds/music/), ducked under the voice. music_under_voice_lu: how far the bed sits under the voice.",
   "transition_whoosh": "sounds/sfx/whoosh.wav",
   "element_land": "sounds/sfx/land.wav",
   "state_change": "sounds/sfx/click.wav",

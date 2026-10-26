@@ -1,0 +1,7 @@
+{
+ "name": "Minimal",
+ "slug": "minimal",
+ "builtin": true,
+ "base": "minimal",
+ "hidden": true
+}

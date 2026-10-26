@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""DVE's own sound effects, synthesized here from noise, tones and envelopes.
+"""AVS's own sound effects, synthesized here from noise, tones and envelopes.
 
-    "$DVE_PYTHON" scripts/make_sounds.py          write sounds/sfx/*.wav and sounds/sfx/peaks.json
-    "$DVE_PYTHON" scripts/make_sounds.py --wire   also point the three cue roles in sounds.json at them
+    "$AVS_PYTHON" scripts/make_sounds.py          write sounds/sfx/*.wav and sounds/sfx/peaks.json
+    "$AVS_PYTHON" scripts/make_sounds.py --wire   also point the three cue roles in sounds.json at them
 
 Nothing is sampled or downloaded: every sound is built from scratch with numpy and scipy, with a
 fixed random seed, so a run always writes the same files and the sounds belong to whoever runs it.

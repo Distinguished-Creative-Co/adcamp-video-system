@@ -13,6 +13,7 @@ import glob
 import hashlib
 import json
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -26,6 +27,11 @@ def bound_files(name):
              os.path.join('script', '%s-scene-map.md' % name),
              os.path.join('public', reel_config.load(name)['src'])]
     files.append('sounds.json')
+    files.append(os.path.join('src', 'brand.json'))   # their color, fonts, name and handle are on screen too
+    cfg_src = open(os.path.join(ROOT, 'src', 'methodology', 'reels', '%s.config.ts' % name)).read()
+    for rel in ['inserts/avatar.png'] + sorted(set(re.findall(r'"(proof/[^"]+|inserts/[^"]+)"', cfg_src))):
+        if os.path.exists(os.path.join(ROOT, 'public', rel)):
+            files.append(os.path.join('public', rel))   # the follow-card photo, screenshots and clips it shows
     files += sorted(glob.glob(os.path.join('src', 'methodology', '*.ts*')))
     files += sorted(glob.glob(os.path.join('src', 'components', '**', '*.ts*'), recursive=True))
     return [f for f in files if '/reels/' not in f or f.endswith('%s.config.ts' % name)]

@@ -105,8 +105,14 @@ export const stateAt = (c: ReelConfig, frame: number, ease: Ease = cubicEase): S
 };
 
 /** Caption lines (words grouped by the generator's line index). Absorbed tokens keep timing only. */
-export const buildLines = (words: ReelWord[], style: 'lines' | 'punch' = 'lines'): Line[] => {
+export const buildLines = (words: ReelWord[], style: 'lines' | 'punch' | 'word' = 'lines'): Line[] => {
   const lines = buildLineGroups(words);
+  if (style === 'word') {
+    // one spoken word at a time, each on its own clock
+    const out: Line[] = [];
+    for (const L of lines) for (const w of L.words) if (w.t) out.push({ line: L.line * 100 + out.length, sent: L.sent, words: [w], s: w.s, e: w.e });
+    return out;
+  }
   if (style !== 'punch') return lines;
   // punch: 1-2 spoken words at a time, breaking after punctuation, each on its own clock
   const out: Line[] = [];

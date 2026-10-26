@@ -1,6 +1,6 @@
 import React from 'react';
 import { Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
-import { CREME_DARK, GOLD } from '../vc/style';
+import { CREME_DARK, ACCENT_ON_FOOTAGE } from '../vc/style';
 import { SANS } from '../vc/fonts';
 import { LEAD_F } from '../../methodology/layout';
 
@@ -37,7 +37,7 @@ export const ShotPanel: React.FC<{
         <div style={{
           position: 'absolute', left: left + focus.x * s - pad, top: top + focus.y * s - pad,
           width: focus.w * s + 2 * pad, height: focus.h * s + 2 * pad, borderRadius: 14,
-          border: `5px solid ${GOLD.yellow}`, opacity: hl,
+          border: `5px solid ${ACCENT_ON_FOOTAGE}`, opacity: hl,
           boxShadow: `0 0 40px rgba(var(--accent-rgb,247,199,21),${(0.5 * hl).toFixed(3)})`,
         }} />
       </div>

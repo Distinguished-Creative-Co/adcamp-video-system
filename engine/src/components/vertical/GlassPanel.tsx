@@ -1,6 +1,6 @@
 import React from 'react';
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
-import { CREME_DARK, GOLD } from '../vc/style';
+import { CREME_DARK, GOLD, ACCENT_ON_FOOTAGE } from '../vc/style';
 import { SANS } from '../vc/fonts';
 import { AvatarView } from './AvatarView';
 import { CaptionLines } from './Captions';
@@ -54,7 +54,7 @@ export const GlassPanel: React.FC<{
       {k.kind === 'stat' ? (
         <div style={{ position: 'absolute', left: 56, top: 250, width: inner, transform: `translateY(${float}px)` }}>
           <div style={{
-            fontFamily: SANS, fontWeight: 800, fontSize: 210, lineHeight: 1, letterSpacing: '-0.04em', color: GOLD.yellow,
+            fontFamily: SANS, fontWeight: 800, fontSize: 210, lineHeight: 1, letterSpacing: '-0.04em', color: ACCENT_ON_FOOTAGE,
             textShadow: `0 0 90px rgba(var(--accent-rgb,247,199,21),${breathe.toFixed(3)})`,
             opacity: pop, transform: `scale(${interpolate(pop, [0, 1], [0.82, 1])})`, transformOrigin: 'left center',
           }}>{k.value}</div>
@@ -78,7 +78,7 @@ export const GlassPanel: React.FC<{
       {k.kind === 'cta' ? (
         <div style={{
           position: 'absolute', right: 56, bottom: 64, padding: '26px 40px', borderRadius: 999,
-          background: GOLD.yellow, color: GOLD.ink, fontFamily: SANS, fontWeight: 800, fontSize: 40, letterSpacing: '-0.01em',
+          background: ACCENT_ON_FOOTAGE, color: GOLD.ink, fontFamily: SANS, fontWeight: 800, fontSize: 40, letterSpacing: '-0.01em',
           boxShadow: `0 0 ${Math.round(40 + 30 * breathe)}px rgba(var(--accent-rgb,247,199,21),${(0.35 + breathe * 0.4).toFixed(3)}), 0 18px 40px rgba(0,0,0,0.45)`,
           opacity: pop, transform: `scale(${interpolate(pop, [0, 1], [0.85, 1]) * (1 + 0.015 * Math.sin((frame / fps) * Math.PI * 2 / 1.6))})`,
           transformOrigin: 'right bottom',

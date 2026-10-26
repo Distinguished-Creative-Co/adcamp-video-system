@@ -7,7 +7,7 @@
 when Settings > Camera > Mirror Front Camera is on, so any text on screen reads backwards.
 
 Output: 1080x1920, constant 30 fps, H.264 yuv420p bt709, ONE AAC track. Why here and
-nowhere else: every later step (the copied transcriber and cutter, Remotion's
+nowhere else: every later step (the transcriber and cutter, Remotion's
 OffthreadVideo) then sees a canvas-sized, CFR, single-audio file. iPhone MOVs carry a
 4-channel spatial-audio track and a slightly variable frame rate the frame math must
 not inherit, and decoding 4K portrait per frame (twice during a swap) is 4x the cost.
@@ -28,6 +28,17 @@ def probe(path):
     p = subprocess.run(['ffprobe', '-v', 'error', '-print_format', 'json', '-show_streams',
                         '-show_format', path], capture_output=True, text=True, check=True)
     return json.loads(p.stdout)
+
+
+def tonemap_vf(trc):
+    """The filter prefix that brings iPhone HDR (HLG) and PQ footage down to standard range, or '' for standard footage.
+    Without it the picture comes out dim and gray once tagged bt709 (the start page's frames use it too)."""
+    if trc == 'arib-std-b67':   # HLG is built to show on standard screens: a direct conversion keeps its brightness
+        return 'zscale=tin=arib-std-b67:pin=bt2020:min=bt2020nc:t=bt709:p=bt709:m=bt709:r=tv:npl=100,format=yuv420p,'
+    if trc == 'smpte2084':      # PQ needs real tone-mapping down to standard range
+        return ('zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=mobius:desat=0,'
+                'zscale=t=bt709:m=bt709:r=tv,format=yuv420p,')
+    return ''
 
 
 def display_size(stream):
@@ -79,12 +90,15 @@ def main():
     w, h = display_size(vids[0])
     if h <= w:
         sys.exit('normalize: %s is %dx%d (landscape). This engine is VERTICAL ONLY. '
-                 'Use ../content-engine for landscape footage.' % (raw, w, h))
+                 'AVS needs a vertical video. Film again with the phone held upright.' % (raw, w, h))
     a_idx = auds[0]['index']
     os.makedirs(os.path.dirname(out) or '.', exist_ok=True)
+    trc = vids[0].get('color_transfer')
+    hdr = trc in ('arib-std-b67', 'smpte2084')
+    tonemap = tonemap_vf(trc)
     cmd = ['ffmpeg', '-y', '-loglevel', 'error', '-i', raw,
            '-map', '0:v:0', '-map', '0:%d' % a_idx,
-           '-vf', ('hflip,' if unmirror else '') + ('crop=trunc(iw/%f/2)*2:trunc(ih/%f/2)*2:(iw-ow)/2:ih-oh,' % (reframe, reframe) if reframe > 1.0 else '')
+           '-vf', tonemap + ('hflip,' if unmirror else '') + ('crop=trunc(iw/%f/2)*2:trunc(ih/%f/2)*2:(iw-ow)/2:ih-oh,' % (reframe, reframe) if reframe > 1.0 else '')
                   + 'scale=%d:%d:force_original_aspect_ratio=increase:flags=lanczos,crop=%d:%d' % (OW, OH, OW, OH),
            '-r', str(FPS), '-fps_mode', 'cfr',
            '-c:v', 'libx264', '-crf', '16', '-preset', 'medium', '-pix_fmt', 'yuv420p',
@@ -99,7 +113,8 @@ def main():
            'out_size': [OW, OH], 'fps': FPS, 'audio_stream': a_idx, 'unmirrored': unmirror, 'reframe': reframe}
     if '--no-record' not in sys.argv:
         json.dump(rec, open(os.path.join(qa, 'source.json'), 'w'), indent=1)
-    print('normalized %s (%dx%d) -> %s (%dx%d, %d fps CFR, 1 AAC track%s)' % (raw, w, h, out, OW, OH, FPS, ', UNMIRRORED' if unmirror else ''))
+    print('normalized %s (%dx%d) -> %s (%dx%d, %d fps CFR, 1 AAC track%s%s)' % (raw, w, h, out, OW, OH, FPS, ', UNMIRRORED' if unmirror else '',
+                                                                           ', HDR tone-mapped to standard range' if hdr else ''))
 
 
 if __name__ == '__main__':

@@ -4,8 +4,7 @@
     python3 scripts/gen_reel_config.py <name> [--face X,Y] [--regen] [--no-register]
 
 Reads script/<name>.txt and script/word-timings/<name>-cut-wx.json. The writer's
-spelling goes onto whisperX timing through the copied script_phrases.phrases()
-(unchanged), then words are chunked into short caption lines. Default direction is
+spelling goes onto whisperX timing through script_phrases.phrases(), then words are chunked into short caption lines. Default direction is
 structural and deterministic (no API key anywhere):
 
   scenes  beat 1 full (the hook, with the open punch-in), then alternate window / full
@@ -28,7 +27,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
-import script_phrases  # noqa: E402  (copied, unchanged)
+import script_phrases  # noqa: E402
 from reel_config import config_path  # noqa: E402
 
 FPS = 30
@@ -206,7 +205,7 @@ def main():
 
     def gap_frame(i_first):
         """A move starts the moment the boundary word ENDS (the first frame after the previous
-        spoken word), never on the next sentence's start. A rule learned from the course the engine grew out of."""
+        spoken word), never on the next sentence's start. A method learned from the AI Video Editor course (see CREDITS)."""
         w = rw[i_first]
         prev = [x for x in rw[:i_first] if x['t']]
         lo = prev[-1]['e'] + 0.02 if prev else 0.0
@@ -314,7 +313,7 @@ def main():
         'framing': {'tight': 1.2},
         'captionStyle': 'lines',
         'placement': 'paid' if '--paid' in args else 'organic',
-        'post': ({'keyword': '', 'gets': '', 'link': 'TODO confirmed destination'} if '--paid' in args else
+        'post': ({'keyword': '', 'gets': '', 'link': ''} if '--paid' in args else
                  {'keyword': '', 'gets': '', 'link': ''}),
         'meta': {'raw': 'inputs/%s.mp4' % name, 'script': 'script/%s.txt' % name,
                  'cutWx': 'script/word-timings/%s-cut-wx.json' % name,

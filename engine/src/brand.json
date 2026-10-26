@@ -1,5 +1,5 @@
 {
-  "_about": "Your look. accent: any hex color (key words, back text, stat numbers, buttons, glows). sans: hanken | inter | montserrat | dmsans | poppins. serif (Hype key words): playfair | instrument | dmserif | fraunces. Re-render to apply. handle / name / avatar: the follow card (inserts), avatar is a square photo under public/ (e.g. inserts/avatar.png); leave handle empty if you never use it.",
+  "_about": "Your brand, used by every look. accent: your brand color (key words, hook titles, numbers, buttons). sans: your main font (hanken, inter, montserrat, dmsans or poppins). serif: your second font for key words (playfair, instrument, dmserif or fraunces). handle, name, avatar: your follow card. To change any of it, tell Claude.",
   "accent": "#F7C715",
   "sans": "hanken",
   "serif": "playfair",

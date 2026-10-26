@@ -1,7 +1,8 @@
 import React from 'react';
-import { GOLD } from '../vc/style';
+import { GOLD, ACCENT_ON_FOOTAGE, moneyColor } from '../vc/style';
 import { accentFace, SANS, type AccentFont } from '../vc/fonts';
 import type { Line } from '../../methodology/timeline';
+import { LEAD_F } from '../../methodology/layout';
 
 /**
  * DYNAMIC captions (captionStyle "dynamic"): the current line, rebuilt as a stacked block.
@@ -13,7 +14,7 @@ const W = 840, CY = 1290, BOTTOM = 1580;   // 120-960: clear of the right-side R
 const chunk = <T,>(a: T[], n: number) => { const o: T[][] = []; for (let i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; };
 const backOut = (p: number) => { const c = 1.7; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
 
-export const DynamicCaptions: React.FC<{ line?: Line; now: number; fps: number; accent?: AccentFont; opacity: number; plain?: boolean }> = ({ line, now, fps, accent, opacity, plain = false }) => {
+export const DynamicCaptions: React.FC<{ line?: Line; now: number; fps: number; accent?: AccentFont; opacity: number; plain?: boolean; money?: string }> = ({ line, now, fps, accent, opacity, plain = false, money }) => {
   if (!line) return null;
   const face = accentFace(accent);
   const words = line.words.filter((w) => w.t);
@@ -41,15 +42,16 @@ export const DynamicCaptions: React.FC<{ line?: Line; now: number; fps: number; 
       {sized.map((r, i) => (
         <div key={i} style={{ height: lh(r), display: 'flex', justifyContent: 'center', alignItems: 'center', gap: r.size * 0.24, whiteSpace: 'nowrap' }}>
           {r.ws.map((w, j) => {
-            const p = Math.min(1, Math.max(0, (now - w.s + 0.04) * fps / 5));
+            const p = Math.min(1, Math.max(0, (now - w.s + (LEAD_F + 1) / fps) * fps / 5));   // arrives with its line (visibleLines), never a blank frame
+            const m = moneyColor(w.t, { money });
             const style: React.CSSProperties = r.accent
-              ? { fontFamily: face.family, fontStyle: 'italic', fontWeight: face.weight, fontSize: r.size, color: GOLD.yellow,
+              ? { fontFamily: face.family, fontStyle: 'italic', fontWeight: face.weight, fontSize: r.size, color: ACCENT_ON_FOOTAGE,
                   letterSpacing: '-0.01em', lineHeight: 1, WebkitTextStroke: '5px rgba(18,14,4,0.62)', paintOrder: 'stroke fill',
                   textShadow: '0 4px 0 rgba(0,0,0,0.4), 0 8px 30px rgba(0,0,0,0.8)' }   // dark rim: yellow must read on white walls
               : { fontFamily: SANS, fontWeight: 800, fontSize: r.size, color: '#fff', textTransform: 'uppercase', letterSpacing: '-0.02em',
                   textShadow: '0 5px 22px rgba(0,0,0,0.6), 0 1px 3px rgba(0,0,0,0.5)' };
             return (
-              <span key={j} style={{ ...style, display: 'inline-block', opacity: p, transform: `scale(${0.7 + 0.3 * backOut(p)})`, transformOrigin: '50% 70%' }}>{w.t}</span>
+              <span key={j} style={{ ...style, ...(m ? { color: m } : {}), display: 'inline-block', opacity: p, transform: `scale(${0.7 + 0.3 * backOut(p)})`, transformOrigin: '50% 70%' }}>{w.t}</span>
             );
           })}
         </div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Img, staticFile } from 'remotion';
 import brand from '../../brand.json';
-import { CREME_DARK, GOLD, glow } from '../vc/style';
+import { CREME_DARK, GOLD, glow, ACCENT_ON_FOOTAGE } from '../vc/style';
 import { SANS } from '../vc/fonts';
 import { easeOutCubic } from '../../methodology/layout';
 import type { FollowInsert } from '../../methodology/ReelConfig';
@@ -42,7 +42,7 @@ export const FollowCard: React.FC<{ insert: FollowInsert; lf: number; len: numbe
       opacity: e * outP, transform: `translateY(${(1 - e) * -40 - (1 - outP) * 20}px)`,
     }}>
       <div style={{ width: 104, height: 104, borderRadius: 52, flex: 'none', overflow: 'hidden', boxSizing: 'border-box',
-        border: `3px solid ${GOLD.yellow}`, background: '#2A2D34', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        border: `3px solid ${ACCENT_ON_FOOTAGE}`, background: '#2A2D34', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {avatar ? (
           <Img src={staticFile(avatar)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
@@ -56,7 +56,7 @@ export const FollowCard: React.FC<{ insert: FollowInsert; lf: number; len: numbe
       <div style={{
         flex: 'none', height: 72, padding: '0 28px', borderRadius: 36, display: 'flex', alignItems: 'center', gap: 12,
         fontFamily: SANS, fontWeight: 800, fontSize: 32, whiteSpace: 'nowrap',
-        background: followed ? 'rgba(255,255,255,0.14)' : GOLD.yellow, color: followed ? CREME_DARK.ink : GOLD.ink,
+        background: followed ? 'rgba(255,255,255,0.14)' : ACCENT_ON_FOOTAGE, color: followed ? CREME_DARK.ink : GOLD.ink,
         border: followed ? '1px solid rgba(255,255,255,0.25)' : '1px solid transparent', boxSizing: 'border-box',
         transform: `scale(${1 - 0.08 * press})`,
         boxShadow: followed ? `0 0 ${Math.round(40 * (1 - burst))}px ${glow((0.6 * (1 - burst)).toFixed(3))}` : `0 8px 24px ${glow(0.25)}`,

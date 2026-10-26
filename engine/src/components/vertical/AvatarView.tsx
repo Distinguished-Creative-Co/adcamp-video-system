@@ -15,7 +15,7 @@ export const AvatarView: React.FC<{
   src: string; view: View; zoom: number; glass: number;
   faceX: number; faceY: number; sW: number; sH: number;
   dx?: number; dy?: number; grade?: Grade | null;
-  back?: { text: string; from: number; lf: number; len: number; fg: string };   // back text + host cutout
+  back?: { text: string; from: number; lf: number; len: number; fg: string; look?: React.ComponentProps<typeof BackTextLayer>['look'] };   // back text + host cutout (+ a style's type)
 }> = ({ src, view, zoom, glass, faceX, faceY, sW, sH, dx = 0, dy = 0, grade, back }) => {
   const p = place(view, zoom, faceX, faceY, sW, sH);
   const gr = useGrade(grade);
@@ -34,7 +34,7 @@ export const AvatarView: React.FC<{
       </div>
       {back ? (
         <>
-          <BackTextLayer text={back.text} lf={back.lf} len={back.len} w={view.w} h={view.h} />
+          <BackTextLayer text={back.text} lf={back.lf} len={back.len} w={view.w} h={view.h} look={back.look} />
           <Sequence from={back.from} durationInFrames={back.len} layout="none">
             <div style={{ position: 'absolute', left: p.left, top: p.top, width: p.width, height: p.height }}>
               <OffthreadVideo muted transparent src={staticFile(back.fg)} style={{ width: '100%', height: '100%', objectFit: 'fill', filter: gr.filter }} />

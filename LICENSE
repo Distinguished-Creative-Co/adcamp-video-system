@@ -20,5 +20,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Third-party software DVE downloads at install time keeps its own license (see CREDITS.md).
-The sample clip (engine/samples/sample.mp4) shows Chris Serra and is included for the install test only.
+Third-party software AVS downloads at install time keeps its own license (see CREDITS.md).
+The sample clip (engine/samples/sample.mp4) and the Picker previews made from it (engine/picker/previews/) show
+Chris Serra and are included for the install test and the Picker only. They are not covered by the license above.

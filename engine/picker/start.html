@@ -1,0 +1,228 @@
+<main class="page">
+  __TOP__
+  <header class="hero">
+    <span class="eyebrow-pill">New video</span>
+    <h1>Set up this <span class="y">video</span></h1>
+    <p class="lede">Pick your captions, up to four effects and a color, add your script if you have one, then press Start. Claude cuts it, and your storyboard opens next.</p>
+    <div class="this" id="this" hidden></div>
+  </header>
+
+  <section class="card done" id="done" role="status" aria-live="polite"></section>
+
+  <section class="pick-sec" aria-labelledby="h-cap">
+    <p class="step">Step 1</p>
+    <h2 id="h-cap">Captions</h2>
+    <p class="note">Pick one. Hover over a card, or press play, to watch it.</p>
+    <div class="grid" id="captions" role="radiogroup" aria-labelledby="h-cap"></div>
+  </section>
+
+  <section class="pick-sec" aria-labelledby="h-fx">
+    <p class="step">Step 2</p>
+    <h2 id="h-fx">Effects</h2>
+    <p class="note">Up to four. Two to four works best, or none for captions only. Claude places each one where your words fit it, and skips one nothing fits. <span class="count" id="count" aria-live="polite"></span></p>
+    <div id="groups"></div>
+  </section>
+
+  <section class="pick-sec" aria-labelledby="h-color">
+    <p class="step">Step 3</p>
+    <h2 id="h-color">Color</h2>
+    <p class="note">The color of your footage. Your captions and graphics keep your brand color either way.</p>
+    <div class="grid colors" id="colors" role="radiogroup" aria-labelledby="h-color"></div>
+  </section>
+
+  <section class="pick-sec" aria-labelledby="h-script">
+    <p class="step">Step 4</p>
+    <h2 id="h-script">Your script</h2>
+    <p class="note">Optional. Paste what you meant to say, a blank line between ideas. It tells Claude where to cut and what the captions say.</p>
+    <label class="sr-only" for="script">Your script</label>
+    <textarea id="script" rows="8" placeholder="Paste your script here"></textarea>
+    <label class="switch"><input type="checkbox" id="noscript"> No script. Write it from what I said.</label>
+  </section>
+
+  <section class="pick-sec" aria-labelledby="h-more">
+    <p class="step">Step 5</p>
+    <h2 id="h-more">The rest</h2>
+    <div class="rows">
+      <div role="radiogroup" aria-label="This video is" class="ways" id="placement">
+        <button type="button" data-v="organic" aria-pressed="true">Regular post</button>
+        <button type="button" data-v="paid" aria-pressed="false">Paid ad</button>
+      </div>
+      <div class="music">
+        <div role="radiogroup" aria-label="Music" class="ways" id="musicway">
+          <button type="button" data-v="none" aria-pressed="true">No music</button>
+          <button type="button" data-v="vibe" aria-pressed="false">Music</button>
+        </div>
+        <label class="sr-only" for="vibe">Music vibe</label>
+        <input type="text" id="vibe" maxlength="80" placeholder="A vibe, like calm and warm" hidden>
+      </div>
+    </div>
+  </section>
+
+  <div class="pbar" id="startbar">
+    <div class="sum" id="sum" aria-live="polite">Pick a caption style</div>
+    <button type="button" class="btn btn-y" id="start" disabled>Start</button>
+  </div>
+</main>
+<script type="application/json" id="avs-start">__STATE__</script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var C = JSON.parse($('avs-start').textContent);
+  var LOCAL = /^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+  var S = { captionStyle: C.picks.captionStyle, effects: {}, placement: C.picks.placement || 'organic', music: C.picks.music || 'none', color: C.picks.color || 'natural' };
+  (C.picks.effects || []).forEach(function (k) { S.effects[k] = true; });
+  var playing = null, names = {};
+  var TICK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+  var PLAY = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  var PAUSE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="4" width="5" height="16" rx="1"/><rect x="14" y="4" width="5" height="16" rx="1"/></svg>';
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function stop() { if (playing) { playing.v.pause(); playing.b.innerHTML = PLAY; playing = null; } }
+  function play(v, b) { if (playing && playing.v === v) return; stop(); v.play().catch(function () {}); b.innerHTML = PAUSE; playing = { v: v, b: b }; }
+  function picked() { return Object.keys(S.effects).filter(function (k) { return S.effects[k]; }); }
+
+  function card(item, type, name, on) {
+    names[item.key] = item.name;
+    var lab = document.createElement('label');
+    lab.className = 'pcard' + (on ? ' on' : '');
+    lab.innerHTML = '<input type="' + type + '" name="' + name + '" id="' + name + '-' + esc(item.key) + '" value="' + esc(item.key) + '"' + (on ? ' checked' : '') + '>' +
+      '<div class="shot"><video muted loop playsinline preload="none" poster="' + esc(item.poster) + '" src="' + esc(item.preview) + '" aria-hidden="true"></video>' +
+      '<button class="play" type="button" aria-label="Play preview of ' + esc(item.name) + '">' + PLAY + '</button><span class="tick" aria-hidden="true">' + TICK + '</span></div>' +
+      '<div class="meta"><div class="name">' + esc(item.name) + '</div><div class="line">' + esc(item.line) + '</div></div>';
+    var v = lab.querySelector('video'), b = lab.querySelector('.play');
+    if (!reduce) {
+      lab.addEventListener('mouseenter', function () { play(v, b); });
+      lab.addEventListener('mouseleave', function () { if (playing && playing.v === v) stop(); });
+    }
+    b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); if (playing && playing.v === v) stop(); else play(v, b); });
+    return lab;
+  }
+
+  function refreshFx() {
+    var n = picked().length;
+    document.querySelectorAll('#groups input').forEach(function (i) {
+      i.disabled = !i.checked && n >= C.max;
+      i.closest('.pcard').classList.toggle('on', i.checked);
+      i.closest('.pcard').classList.toggle('full', i.disabled);
+    });
+    $('count').textContent = n + ' of ' + C.max + ' picked' + (n >= C.max ? '. Four is the most per video.' : '');
+    summary();
+  }
+
+  function summary() {
+    var fx = picked().map(function (k) { return names[k]; });
+    var bits = [(names[S.captionStyle] || 'No') + ' captions', fx.length ? fx.join(', ') : 'no effects', (names['color:' + S.color] || 'Natural') + ' color',
+      S.placement === 'paid' ? 'paid ad' : 'regular post', S.music === 'none' ? 'no music' : 'music: ' + (S.music || 'pick a vibe')];
+    $('sum').innerHTML = esc(bits[0]) + '<small>' + esc(bits.slice(1).join(', ')) + '</small>';
+    S.said = bits.join(', ');
+    $('start').disabled = !S.captionStyle;
+  }
+
+  // the video this page is for
+  if (C.video) {
+    $('this').hidden = false;
+    $('this').innerHTML = (C.thumb ? '<img src="' + esc(C.thumb) + '" alt="A frame of this video" width="90" height="160">' : '') +
+      '<div><p class="label">This video</p><p class="vname">' + esc(C.video) + '</p><p class="muted">Your look: ' + esc(C.look) + '</p></div>';
+  }
+
+  C.captions.forEach(function (it) {
+    var lab = card(it, 'radio', 'cap', it.key === S.captionStyle);
+    lab.querySelector('input').addEventListener('change', function () {
+      S.captionStyle = it.key;
+      document.querySelectorAll('#captions .pcard').forEach(function (c) { c.classList.toggle('on', c.querySelector('input').checked); });
+      summary();
+    });
+    $('captions').appendChild(lab);
+  });
+  C.groups.forEach(function (g) {
+    var sec = document.createElement('div');
+    sec.className = 'fxgroup';
+    sec.innerHTML = '<p class="label">' + esc(g.name) + '</p>';
+    var grid = document.createElement('div');
+    grid.className = 'grid';
+    g.items.forEach(function (it) {
+      var lab = card(it, 'checkbox', 'fx', !!S.effects[it.key]);
+      lab.querySelector('input').addEventListener('change', function (e) { S.effects[it.key] = e.target.checked; refreshFx(); });
+      grid.appendChild(lab);
+    });
+    sec.appendChild(grid);
+    $('groups').appendChild(sec);
+  });
+
+  (C.colors || []).forEach(function (c) {
+    names['color:' + c.key] = c.name;
+    var lab = document.createElement('label');
+    lab.className = 'pcard' + (c.key === S.color ? ' on' : '');
+    lab.innerHTML = '<input type="radio" name="color" id="color-' + esc(c.key) + '" value="' + esc(c.key) + '"' + (c.key === S.color ? ' checked' : '') + '>' +
+      '<div class="shot"><img src="' + esc(c.poster) + '" alt="' + esc(c.name) + ' color on this video" loading="lazy"><span class="tick" aria-hidden="true">' + TICK + '</span></div>' +
+      '<div class="meta"><div class="name">' + esc(c.name) + '</div><div class="line">' + esc(c.line) + '</div></div>';
+    lab.querySelector('input').addEventListener('change', function () {
+      S.color = c.key;
+      document.querySelectorAll('#colors .pcard').forEach(function (x) { x.classList.toggle('on', x.querySelector('input').checked); });
+      summary();
+    });
+    $('colors').appendChild(lab);
+  });
+
+  $('script').value = C.script || '';
+  $('noscript').addEventListener('change', function () { $('script').disabled = this.checked; });
+  function ways(id, key, after) {
+    $(id).querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        $(id).querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+        after(b.dataset.v);
+      });
+    });
+  }
+  function setWay(id, v) { $(id).querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', x.dataset.v === v ? 'true' : 'false'); }); }
+  setWay('placement', S.placement);
+  ways('placement', 'placement', function (v) { S.placement = v; summary(); });
+  if (S.music !== 'none') { setWay('musicway', 'vibe'); $('vibe').hidden = false; $('vibe').value = S.music; }
+  ways('musicway', 'music', function (v) { $('vibe').hidden = v === 'none'; S.music = v === 'none' ? 'none' : ($('vibe').value.trim() || ''); summary(); if (v !== 'none') $('vibe').focus(); });
+  $('vibe').addEventListener('input', function () { S.music = this.value.trim(); summary(); });
+  refreshFx();
+
+  function body() {
+    return { captionStyle: S.captionStyle, effects: picked(), placement: S.placement, music: S.music || 'none', color: S.color, look: C.picks.look || null,
+      script: $('noscript').checked ? '' : $('script').value, noScript: $('noscript').checked, video: C.video || null };
+  }
+  function done(msg) {
+    var d = $('done'); d.innerHTML = '<h2>Started</h2><p>' + msg + '</p>'; d.classList.add('show');
+    d.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function failed(msg) { $('sum').innerHTML = '<span class="err">' + esc(msg || 'That did not save. Try again, or tell Claude your picks in the chat.') + '</span>'; $('start').disabled = false; }
+
+  $('start').addEventListener('click', function () {
+    var b = body();
+    if (S.music !== 'none' && !S.music) { failed('Type a music vibe, or pick No music.'); return; }
+    $('start').disabled = true;
+    stop();
+    if (LOCAL) {
+      fetch('/api/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) })
+        .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error); }); })
+        .then(function () { done('Go back to Claude. It has your picks and starts cutting.'); })
+        .catch(function (e) { failed(e && e.message); });
+      return;
+    }
+    // beside the chat: the picks go into this page's store, then one comment tells Claude to start
+    var summaryText = 'Start my video: ' + S.said + '.';
+    window.claude.use('db').then(function (db) {
+      if (!db) throw new Error();
+      b.at = new Date().toISOString();
+      return db.doc('start/current').set(b);
+    }).then(function () {
+      return window.claude.use('comments').then(function (c) {
+        if (!c || !c.canSendToClaude) return 'chat';
+        return c.canSendToClaude().then(function (can) {
+          if (can !== 'available') return 'chat';
+          return c.anchorFor($('startbar')).then(function (anchor) { return c.sendToClaude({ anchor: anchor, text: summaryText }); }).then(function () { return 'sent'; });
+        });
+      }).catch(function () { return 'chat'; });
+    }).then(function (how) {
+      done(how === 'sent' ? 'Claude has your picks and is cutting your video now. Your storyboard opens next, beside the chat.'
+                          : 'Your picks are saved. Tell Claude in the chat: <b>start</b>.');
+    }).catch(function () { failed(); });
+  });
+})();
+</script>

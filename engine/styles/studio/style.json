@@ -1,0 +1,13 @@
+{
+ "name": "Studio",
+ "slug": "studio",
+ "builtin": true,
+ "base": "studio",
+ "hidden": true,
+ "feel": "Cards and panels: glass card windows, proof and stat panels, a call-to-action card. Only by name.",
+ "aliases": [
+  "cards and panels",
+  "cards",
+  "panels"
+ ]
+}

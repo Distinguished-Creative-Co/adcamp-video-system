@@ -1,1 +1,1 @@
-Proof screenshots for Studio panels go here (png, jpg or webp): real, unedited captures only, such as a review, a booking, a results page. The panel shows a source line saying where and when it was captured.
+Proof screenshots go here (png, jpg or webp): real, unedited captures only, such as a review, a booking, a results page. The screenshot effects and panels show a source line saying where and when it was captured.

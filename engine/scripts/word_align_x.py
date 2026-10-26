@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Per-word timings for a media file -> script/word-timings/<stem>-wx.json.
 
-    "$DVE_PYTHON" scripts/word_align_x.py <media> [--model NAME] [--fast | --full]
+    "$AVS_PYTHON" scripts/word_align_x.py <media> [--model NAME] [--fast | --full]
 
 Modes (CPU, int8 everywhere):
   --fast    faster-whisper transcription only (model base). Words keep their punctuation,
@@ -16,10 +16,14 @@ import json
 import os
 import sys
 
+# everything stays on this Mac: pyannote (inside whisperX) sends usage pings by default, Hugging Face may too
+os.environ.setdefault('PYANNOTE_METRICS_ENABLED', '0')
+os.environ.setdefault('HF_HUB_DISABLE_TELEMETRY', '1')
+
 DEVICE = 'cpu'
 COMPUTE = 'int8'
 SETUP_HINT = ('the speech environment is not set up (faster-whisper / whisperX missing). '
-              'Run ~/DVE/tools/doctor.sh')
+              'Run ~/AVS/tools/doctor.sh')
 
 
 def _need(module):
@@ -99,7 +103,7 @@ def main():
     with open(out, 'w', encoding='utf-8') as f:
         json.dump(rows, f, indent=2, ensure_ascii=False)
         f.write('\n')
-    print('wrote %s — %d words (%s)' % (out, len(rows), label))
+    print('wrote %s, %d words (%s)' % (out, len(rows), label))
 
 
 if __name__ == '__main__':

@@ -75,7 +75,7 @@ def main():
         return 0
     print('WARNING: the cut audio still carries what looks like an uncut flub:')
     for r in repeats:
-        print('  beat %d: phrase repeated @%.2fs then @%.2fs — "%s"' % (beat_of(r['t1'], beats), r['t1'], r['t2'], r['phrase']))
+        print('  beat %d: phrase repeated @%.2fs then @%.2fs: "%s"' % (beat_of(r['t1'], beats), r['t1'], r['t2'], r['phrase']))
     for t, raw in cues:
         print('  beat %d: leftover reset cue @%.2fs ("%s")' % (beat_of(t, beats), t, raw))
     print('fix: re-cut the source so only the clean re-read survives, then re-align and re-check')

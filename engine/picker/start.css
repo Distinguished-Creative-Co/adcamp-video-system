@@ -1,0 +1,15 @@
+/* The start page, on top of picker.css */
+.step { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: var(--yellow); }
+.count { color: var(--t-white); font-weight: 700; }
+.fxgroup { display: grid; gap: 8px; margin-top: 10px; }
+.pcard.full { opacity: 0.45; cursor: not-allowed; }
+.this { display: flex; gap: 14px; align-items: center; background: var(--inner); border: 1px solid #2E2E2E; border-radius: var(--r-inner); padding: 10px 14px 10px 10px; }
+.this img { width: 54px; height: auto; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 8px; }
+.this p { margin: 0; }
+.vname { font-weight: 700; overflow-wrap: anywhere; }
+.rows { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.music { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.music input { width: min(320px, 100%); }
+textarea#script { min-height: 160px; }
+textarea:disabled { opacity: 0.5; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

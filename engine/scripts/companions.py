@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Render the companion pack for a reel (adapted from Georgy): covers and static ads, built
+"""Render the companion pack for a reel: covers and static ads, built
 from the reel's own config, so they carry only its approved title, stat and CTA.
 
-    python3 scripts/companions.py <name>
+    python3 scripts/companions.py <name> [<output stem, e.g. name-v2>]
 
 Writes out/<name>-companions/{cover-vertical,cover-feed,static-square,static-feed,static-vertical}.png
 (+ thumbnail.png when the config has a thumbnail: run matte_reel.py first)
@@ -18,7 +18,7 @@ FORMATS = ['cover-vertical', 'cover-feed', 'static-square', 'static-feed', 'stat
 
 
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) not in (2, 3):
         sys.exit(__doc__)
     name = sys.argv[1]
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -29,7 +29,7 @@ def main():
         # a captions-only reel has no title or proof to put on a static: an empty card is filler
         print('companions: skipped (%s has no cover title, so there is nothing for a static ad to say)' % name)
         return
-    out = os.path.join(ROOT, 'out', '%s-companions' % name)
+    out = os.path.join(ROOT, 'out', '%s-companions' % (sys.argv[2] if len(sys.argv) > 2 else name))   # a version's own folder (name-v2)
     os.makedirs(out, exist_ok=True)
     bundle = os.path.join(ROOT, '.qa-bundle')
     subprocess.run(['npx', 'remotion', 'bundle', 'src/methodology/index.ts', '--out-dir', bundle, '--log=error'], cwd=ROOT, check=True)

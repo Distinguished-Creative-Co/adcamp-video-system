@@ -6,12 +6,12 @@
         --report script/<name>-takes.md --json script/word-timings/<name>-takes.json \
         [--noise-db N --strict-db N] [--drop-take N,..] [--keep-take N,..] [--allow-missing] [--plan-only]
 
-Why this exists: a creator re-reads lines without saying "reset, reset". The copied
-cutter (hostcut_plan.py) only removes marked flubs and dead air, so every retake would
+Why this exists: a creator re-reads lines without saying "reset, reset". A plain
+silence cutter only removes marked flubs and dead air, so every retake would
 ship. This step matches the transcript against the writer's script, keeps the LAST
 complete take of each script sentence, drops false starts / partial and earlier takes,
-and tightens sentence-boundary pauses. It is built on the copied hostcut.py primitives,
-unchanged: one silence map, the HARD RULE gate, and forbidden spans. Every dropped take
+and tightens sentence-boundary pauses. It is built on the hostcut.py primitives:
+one silence map, the HARD RULE gate, and forbidden spans. Every dropped take
 is a forbidden span, so render_cut structurally refuses a keep list that leaks one.
 
 Rule: the LAST complete take of each sentence that can be CUT OUT cleanly (silence at both
@@ -34,7 +34,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import hostcut  # noqa: E402  (copied, unchanged)
+import hostcut  # noqa: E402
 
 MIN_JOIN = 0.15      # a cut may land only in a silence at least this long
 LEAD = 0.12          # silence kept before a kept take's first word
@@ -317,6 +317,12 @@ def trims_path(a):
     return re.sub(r'-takes\.json$', '-trims.json', a.json)
 
 
+def picks_path(a):
+    """<name>-takepicks.json: the --keep-take / --drop-take choices, saved as raw-second spans so every later re-cut
+    (another fix, a flip, a different take elsewhere) keeps them even if the take numbers shift."""
+    return re.sub(r'-takes\.json$', '-takepicks.json', a.json)
+
+
 def apply_trims(keep, trims):
     """Remove raw ranges from the keep list (a fumble inside a kept take). The HARD RULE gate
     checks every new boundary afterwards, so a trim edge must sit in a real silence."""
@@ -435,8 +441,37 @@ def main():
     cands.sort(key=lambda c: (c['i0'], c['unit']))
     for k, c in enumerate(cands, 1):
         c['n'] = k
-    drop = {int(x) for x in a.drop_take.split(',') if x.strip()}
-    force = {int(x) for x in a.keep_take.split(',') if x.strip()}
+    # take picks: the saved ones first (matched by where they sit in the recording), then this run's, which replace
+    # an earlier pick for the same sentence; saved again only when this run made a pick
+    span = lambda c: [round(words[c['i0']]['start'], 3), round(words[c['i1']]['end'], 3)]  # noqa: E731
+
+    def match(sp):
+        best, most = None, 0.0
+        for c in cands:
+            c0, c1 = span(c)
+            o = min(c1, sp[1]) - max(c0, sp[0])
+            if o > most and o >= 0.5 * min(c1 - c0, sp[1] - sp[0]):
+                best, most = c, o
+        return best
+    pp = picks_path(a)
+    saved = json.load(open(pp)) if os.path.exists(pp) else {}
+    force_c = [c for c in map(match, saved.get('keep', [])) if c]
+    drop_c = [c for c in map(match, saved.get('drop', [])) if c]
+    by_n = {c['n']: c for c in cands}
+    cli_force = [by_n[int(x)] for x in a.keep_take.split(',') if x.strip() and int(x) in by_n]
+    cli_drop = [by_n[int(x)] for x in a.drop_take.split(',') if x.strip() and int(x) in by_n]
+    for c in cli_force:
+        force_c = [x for x in force_c if x['unit'] != c['unit']] + [c]
+        drop_c = [x for x in drop_c if x['n'] != c['n']]
+    for c in cli_drop:
+        drop_c = [x for x in drop_c if x['n'] != c['n']] + [c]
+        force_c = [x for x in force_c if x['n'] != c['n']]
+    if (cli_force or cli_drop) and not a.plan_only:
+        json.dump({'keep': [span(c) for c in force_c], 'drop': [span(c) for c in drop_c]}, open(pp, 'w'), indent=1)
+    elif force_c or drop_c:
+        print('takes: re-applied %d saved take pick(s) from %s' % (len(force_c) + len(drop_c), os.path.basename(pp)))
+    drop = {c['n'] for c in drop_c}
+    force = {c['n'] for c in force_c}
 
     # CUTTABLE EDGES: a take can only be kept if it can be cut out. Its start needs a real
     # silence before it (or the previous sentence's take ending right against it), and its end
@@ -497,6 +532,8 @@ def main():
         win = chosen.get(c['unit'])
         if not c['complete']:
             why = 'partial retake / false start'
+        elif win is not None and win['n'] in force:
+            why = 'another take was picked'
         elif win is not None and c['i0'] > win['i0']:
             why = 'later take, reads the script less cleanly'
         else:
@@ -652,7 +689,8 @@ def main():
         i = j + 1
     L += ['', '## Keep segments (raw seconds)', '']
     L += ['- %.3f to %.3f (%.2fs)' % (s, e, e - s) for s, e in keep]
-    L += ['', 'Override a pick with `--drop-take N` or `--keep-take N` (take numbers from the candidates in the JSON twin).']
+    L += ['', 'Override a pick with `--drop-take N` or `--keep-take N` (take numbers from the candidates in the JSON twin). '
+              'Picks are saved in %s and kept on every later re-cut.' % os.path.basename(picks_path(a))]
     if errors:
         L += ['', '## ERRORS', ''] + ['- ' + x for x in errors]
     if missing:

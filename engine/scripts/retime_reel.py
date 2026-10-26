@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Move a reel's timed choices onto a new cut's word timing (after a trim or re-cut), keeping
-every approved choice: scenes, swaps, panel cues, cover. No regeneration, so no copy is lost.
+every approved choice: scenes, swaps, panel cues, cover, thumbnail, words behind, inserts, effects and zoom punches. No regeneration, so no copy is lost.
 
     python3 scripts/retime_reel.py <name> --from <config backup> [--words-from <reel>]
 
@@ -19,6 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import reel_config  # noqa: E402
 import gen_reel_config  # noqa: E402
+import styles_lib  # noqa: E402
 
 FPS = 30
 
@@ -78,6 +79,10 @@ def main():
                     return g
         return fr
 
+    for i, j in omap.items():   # the key words (and emphasis) they chose stay on the same words in the new cut
+        for flag in ('key', 'big'):
+            if ow[i].get(flag):
+                nw[j][flag] = True
     cfg = dict(old)
     cfg['words'] = new_ref['words']
     cfg['frames'] = frames_new
@@ -99,7 +104,35 @@ def main():
     cfg['swaps'] = sw_new
     if cfg.get('cover'):
         cfg['cover'] = dict(cfg['cover'], frame=min(remap(cfg['cover']['frame']), frames_new - 1))
-    gen_reel_config.write_config(cfg, reel_config.config_path(name), cfg['words'])
+    if cfg.get('thumbnail'):
+        cfg['thumbnail'] = dict(cfg['thumbnail'], frame=min(remap(cfg['thumbnail']['frame']), frames_new - 1))
+
+    def remap_timed(e):   # words behind, inserts and effects: their own frames and every timed element inside
+        e = json.loads(json.dumps(e))
+        for fld in ('in', 'out', 'at', 'strikeAt'):
+            if isinstance(e.get(fld), (int, float)):
+                e[fld] = remap(e[fld])
+        for lst in ('items', 'lines', 'notes'):
+            for it in e.get(lst) or []:
+                if isinstance(it, dict) and isinstance(it.get('at'), (int, float)):
+                    it['at'] = remap(it['at'])
+        return e
+    for key in ('backText', 'inserts', 'effects', 'zooms'):
+        if cfg.get(key):
+            cfg[key] = [remap_timed(e) for e in cfg[key]]
+    # write_config knows the generator's own keys only: write those, then put back every other key the reel had
+    # (look, music, words behind, effects, thumbnail...), and drop the generator keys the reel had removed
+    known = ('id', 'src', 'source', 'faceX', 'faceY', 'fps', 'frames', 'open', 'scenes', 'cover', 'framing',
+             'captionStyle', 'placement', 'post', 'swaps', 'words', 'meta')
+    gen_reel_config.write_config(dict({k: None for k in ('cover', 'framing')}, **cfg), reel_config.config_path(name), cfg['words'])
+    out = open(reel_config.config_path(name)).read()
+    for k in ('framing',):
+        if k not in old:
+            out = styles_lib.remove_key(out, k)
+    for k, v in cfg.items():
+        if k not in known:
+            out = styles_lib.set_key(out, k, v, 'kept by retime_reel.py')
+    open(reel_config.config_path(name), 'w').write(out)
     head = '// RETIMED by scripts/retime_reel.py onto the current cut. Choices kept from the approved config.\n'
     p = reel_config.config_path(name)
     src = open(p).read().replace("import type { ReelConfig } from '../ReelConfig';\n", "import type { ReelConfig } from '../ReelConfig';\n" + head, 1)
