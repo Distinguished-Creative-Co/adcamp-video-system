@@ -441,6 +441,7 @@ def main(argv):
         print('error: AVS is not installed. Run: avs install --all')
         return 1
     os.environ.update(A.env())
+    os.chdir(ENG)   # as smoke_test.sh's `cd "$ENG"`: the sample's path below is the engine folder's
     start = time.time()
     T = tempfile.mkdtemp(prefix='avs-smoke-')
     keep = {}
