@@ -39,6 +39,9 @@ jobs:
             ${{ runner.temp }}/Jane Doe/AVS/engine/qa/sample/stills/sheet.png
             ${{ runner.temp }}/Jane Doe/AVS/engine/qa/sample/storyboard
             ${{ runner.temp }}/Jane Doe/AVS/engine/script/sample-scene-map.md
+            ${{ runner.temp }}/Jane Doe/AVS/engine/script/sample-takes.md
+            ${{ runner.temp }}/Jane Doe/AVS/engine/script/word-timings
+            ${{ runner.temp }}/Jane Doe/AVS/engine/qa/sample/seams.json
   windows-planted-failures:
     runs-on: windows-latest
     timeout-minutes: 20
@@ -84,3 +87,5 @@ jobs:
             ${{ runner.temp }}/Jane Doe/AVS/engine/out/setup-check.png
             ${{ runner.temp }}/smoke.txt
             ${{ runner.temp }}/Jane Doe/AVS/engine/out/sample.mp4
+            ${{ runner.temp }}/Jane Doe/AVS/engine/script/word-timings
+            ${{ runner.temp }}/Jane Doe/AVS/engine/script/sample-takes.md

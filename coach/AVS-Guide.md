@@ -4,9 +4,9 @@ AdCamp Video System (AVS) by Chris Serra, built for AdCamp members. Cite section
 
 ## What AVS is
 
-AVS turns a phone video of you talking (plus your script, if you have one) into a finished, captioned vertical video for Reels, Shorts, TikTok and Meta ads. It runs inside Claude Code on your own Mac: the cutting, transcribing and rendering all happen on your computer. Claude Code reads your transcript and preview stills to build the edit, and rendering and the storyboard page need an internet connection for the fonts, which load from Google Fonts. Your style board, video setup page, storyboard, Picker and carousel slides open as private pages in your Claude account, beside the chat, so their frames go to Claude the way your chat does. Only you can see them. Say "keep it on my Mac" and Claude uses pages in your browser instead.
+AVS turns a phone video of you talking (plus your script, if you have one) into a finished, captioned vertical video for Reels, Shorts, TikTok and Meta ads. It runs inside Claude Code on your own PC: the cutting, transcribing and rendering all happen on your computer. Claude Code reads your transcript and preview stills to build the edit, and rendering and the storyboard page need an internet connection for the fonts, which load from Google Fonts. Your style board, video setup page, storyboard, Picker and carousel slides open as private pages in your Claude account, beside the chat, so their frames go to Claude the way your chat does. Only you can see them. Say "keep it on my PC" and Claude uses pages in your browser instead.
 
-- Mac only, Apple chip or Intel (Intel is supported but not yet tested on a real Intel Mac), macOS 12 or newer, about 12 GB free.
+- This is the Windows preview: Windows 11, or Windows 10 version 1809 or newer, an Intel or AMD chip (not ARM, like a Snapdragon laptop), about 12 GB free, 16 GB of memory recommended (8 GB works but is slower, and hasn't been tested yet). A test computer installs it and makes the test video every time AVS changes, but few people have used it on a real PC yet, so tell Chris what you see.
 - You need a Claude plan that includes Claude Code. Everything else installs for you.
 - Remotion (the part that draws the video) is free for individuals and for companies with up to 3 employees. A company with 4 or more employees needs a paid Remotion company license (remotion.pro).
 - Use the strongest Claude model your plan allows. Smaller models work but take longer and need more nudging.
@@ -16,27 +16,27 @@ AVS turns a phone video of you talking (plus your script, if you have one) into 
 1. Easiest: in the Claude desktop app's Code tab, start a new chat and paste this, exactly:
 
 ```
-Install AdCamp Video System for me from https://github.com/Distinguished-Creative-Co/adcamp-video-system into ~/AVS (download it as a tar.gz with curl, not with git), then open ~/AVS/INSTALL.md and follow it step by step. Tell me what each step downloads and how big it is before it starts, and ask me before anything that needs an account, a password, or a choice from me.
+Install AdCamp Video System for Windows for me from https://github.com/Distinguished-Creative-Co/adcamp-video-system/archive/refs/heads/windows-preview.zip into the AVS folder in my home folder (download it with curl.exe and unpack it with tar.exe, not with git), then open AVS\INSTALL.md and follow it step by step. Tell me what each step downloads and how big it is before it starts, and ask me before anything that needs an account, a password, or a choice from me.
 ```
 
-   Or from the Plugins panel: click the **+** next to the message box, then **Plugins**, **Browse plugins**, **Add**, **Add marketplace**, **Add from a repository**. Paste `https://raw.githubusercontent.com/Distinguished-Creative-Co/adcamp-video-system/main/marketplace.json`, click **Sync**, install **AdCamp Video System**, start a new chat and say "Set up AVS". If Sync says the marketplace already exists, they added it before: go back to **Browse plugins** and install from there. Neither way needs git or any developer tools, and Claude asks their OK before each step.
+   Or from the Plugins panel: click the **+** next to the message box, then **Plugins**, **Browse plugins**, **Add**, **Add marketplace**, **Add from a repository**. Paste `https://raw.githubusercontent.com/Distinguished-Creative-Co/adcamp-video-system/windows-preview/marketplace.json`, click **Sync**, install **AdCamp Video System for Windows (Preview)**, start a new chat and say "Set up AVS". If Sync says the marketplace already exists, they added it before: go back to **Browse plugins** and install from there. Neither way needs git, any developer tools or an administrator, and Claude asks their OK before each step. Claude checks the PC first and stops right there, with nothing downloaded, if it isn't a fit.
 
-2. If you have the zip instead (`AVS-2.2.1.zip`, from a link Chris shared), put it in Downloads and say: "Install AdCamp Video System from ~/Downloads/AVS-2.2.1.zip into ~/AVS, then follow ~/AVS/INSTALL.md". A Google Drive link may show a "can't scan for viruses" page first: that's normal for a 50 MB file, click Download anyway.
+2. A step that fails twice: Claude stops and saves a short report on your Desktop called AVS-report, with no videos or personal details. Post it in the member group.
 3. Before installing, Claude shows you the terms and waits for your yes. The one that matters: **Remotion** (the video renderer) is free for individuals and for companies with up to 3 employees. A company with 4 or more employees needs a paid Remotion company license (remotion.pro).
 4. Claude runs each step, says what it downloads and how big it is, and asks for your choices: your brand color, a font pair, and the name, handle and photo for your follow card. Expect a permission prompt from Claude Code for each command. You can approve them one by one, or choose the option that allows them for the AVS folder so it stops asking.
-5. It makes a test video from the included sample in Clean Talk, one of the four starter looks (10 to 15 minutes, longer on Intel), and plays it in the chat.
+5. It makes a test video from the included sample in Clean Talk, one of the four starter looks (often 20 to 40 minutes on a PC), and plays it in the chat.
 6. Then it sets your look, every time, so you never have to pick one per video: send links to reels you love, open the Picker, or pick one of the four starter looks. Then drop in your first video and say "make a reel".
 
-Timing: 20 to 40 minutes the first time, about 3 GB of downloads, then the test video adds 10 to 15 minutes. Longer on an Intel Mac.
+Timing: up to about an hour the first time, about 3 GB of downloads, then the test video often adds 20 to 40 minutes on a PC.
 
 The first time you open Claude Code from a terminal it asks for a color theme, a sign-in and to trust the folder. That's normal. The Code tab in the desktop app skips those screens.
 
 ## Making a video
 
-1. Get your video onto your Mac (AirDrop from your phone is easiest), tell Claude "open my AVS inbox" and drop it in. Add your script as a text file, or paste it into the chat. If you filmed it as a few clips, put them all in. AVS puts them in the order you recorded them, and clips filmed more than 10 minutes apart become separate videos.
+1. Get your video onto your PC (from an iPhone: icloud.com/photos or the phone's cable, from an Android: photos.google.com or the cable), tell Claude "open my AVS inbox" and drop it in. Add your script as a text file, or paste it into the chat. If you filmed it as a few clips, put them all in. AVS puts them in the order you recorded them, and clips filmed more than 10 minutes apart become separate videos.
 2. In a chat, say: "Make a reel from the video in my inbox." (Right after installing or updating, start a new chat first.)
 3. Your setup opens beside the chat: pick your captions (8 styles, each playing), up to four effects (20 of them, each playing, grouped by what they need from you, two to four works best), a color for your footage (Natural, Bright and Clean, Warm, Cool, Soft Film, Moody or Cinematic, each shown on a frame of your own video), paste your script if you have one, and choose regular post or paid ad and a music vibe. It's filled in from last time, so a video like your last one is one press of Start. Say "make it in Big Energy" to use another look for this one. Claude only asks before cutting when something needs you, like a word it wasn't sure it heard right.
-4. It cuts your takes, plays a quick draft of the whole video right in the chat (half size, marked DRAFT, about a minute to make), and opens your storyboard beside the chat. Comment on any part you'd change, or give notes in plain words or by time, like "at 0:12, cut tighter". It makes the changes, updates the storyboard and plays a fresh draft. The real video renders only after you say "render it". It takes a few minutes, longer for a long video or on an Intel Mac. Want a change after that? Comment again, and the new version lands next to the first.
+4. It cuts your takes, plays a quick draft of the whole video right in the chat (half size, marked DRAFT, about a minute to make), and opens your storyboard beside the chat. Comment on any part you'd change, or give notes in plain words or by time, like "at 0:12, cut tighter". It makes the changes, updates the storyboard and plays a fresh draft. The real video renders only after you say "render it". It takes a few minutes, longer for a long video, and longer on a PC than on a Mac. Want a change after that? Comment again, and the new version lands next to the first.
 5. The finished video plays in the chat too. In `~/AVS/engine/out` you get: the video (upload this one), a phone copy, and, when the video has a cover title, cover images and static ads in the `<name>-companions` folder. Claude pastes your caption draft into the chat at the end, ready to trim and copy. Nothing is ever posted for you.
 
 No script? It still works: Claude writes the script from what you said. With a script it's better, because the script is the map for where to cut and what the captions say.
@@ -62,7 +62,7 @@ If you're not sure what you want, tell Claude "open the picker". A page opens be
 - Picking a starter look makes it your default for new videos.
 - **Your fonts** (optional, under either way): four font pairs playing on the sample. The plain words are your main font, the slanted key word is your second font. Your pick is used in every video, card and carousel.
 - To keep an effect to one part of your videos, turn on "Choose where in your video each effect may go", tick the effect, then press Start, Middle or End on it. Start means your opening line or two, End means your closing.
-- The page is a private page in your Claude account, and your saved pick is kept with it. Change your picks any time: "open the picker" again. (Said "keep it on my Mac"? Then it opens in your browser instead.)
+- The page is a private page in your Claude account, and your saved pick is kept with it. Change your picks any time: "open the picker" again. (Said "keep it on my PC"? Then it opens in your browser instead.)
 
 ## Your own styles
 
@@ -70,7 +70,7 @@ If you love how someone else's reels are edited, send Claude the links (Instagra
 
 - Claude studies each reel start to finish, asks what you want from each one, then rebuilds that look on YOUR video: the type, colors, where the words sit, how they move, the pace. It shows you the result next to the example, with a plain list of what matches and what it couldn't match.
 - Give notes until it's right, then it's saved under the name you pick. After that, drop your video in and say "make it in <name>". It becomes your default if you don't have one yet.
-- Some posts only show to people who are logged in. Claude asks before using your browser's login for that one download. Your login is not stored. Instagram and TikTok don't officially allow downloading posts and sometimes block it. Using your browser's login can make your Mac ask for your Mac password: that's macOS, and you can say no and drop the file in instead. AVS only keeps the copy on your Mac to study the look and never posts it. If a download is blocked, or you'd rather not, save the video yourself and drop the file in.
+- Some posts only show to people who are logged in. On a PC, AVS can't borrow your browser's login, so save the video yourself and drop the file in. Instagram and TikTok don't officially allow downloading posts and sometimes block it. AVS only keeps the copy on your PC to study the look and never posts it.
 - What's copied is the look, never the other creator's footage, music, words, logo or name. Fonts come from open-licensed ones: Claude tells you which face stands in for theirs.
 - What AVS can't do (yet): copy another creator's music, speed ramps, 3D, or stock and meme images. It says so instead of faking it.
 - Manage them anytime: "what styles do I have", "make Soft Story my default", "rename it", "get rid of that style" (it's hidden, not deleted). The four starter looks stay as they are.
@@ -142,18 +142,23 @@ AVS's own rules: film vertical, pause between sentences, and say "reset, reset" 
 
 ## Updates
 
-Once a day, at the start of a chat, AVS checks GitHub for a newer version (it only reads the version number, nothing about you or your videos is sent). When there's a new one, Claude tells you and asks if you want it. Say yes. You can also say "update AVS" any time, or tell Claude Code: "Run ~/AVS/tools/update.sh --latest". It downloads the newest version from GitHub (about 50 MB). Installed from a zip and have a newer zip? "Run ~/AVS/tools/update.sh ~/Downloads/AVS-<version>.zip" works too. It keeps your reels, brand, sound settings, music and saved styles, then refreshes the renderer packages, the cutout library and the skill, so it needs internet and a few minutes. Start a new chat afterwards.
+Once a day, at the start of a chat, AVS checks GitHub for a newer version (it only reads the version number, nothing about you or your videos is sent). When there's a new one, Claude tells you and asks if you want it. Say yes. You can also say "update AVS" any time, or tell Claude Code: "Run avs update --latest". It downloads the newest Windows preview from GitHub (about 60 MB). Installed from a zip and have a newer zip? "Run avs update ~/Downloads/AVS-<version>.zip" works too. It keeps your reels, brand, sound settings, music and saved styles, then refreshes the renderer packages, the cutout library and the skill, so it needs internet and a few minutes. Start a new chat afterwards.
 
 ## Fixes
 
-Start most install problems the same way: tell Claude Code "run ~/AVS/tools/doctor.sh and fix what it says is missing". Each missing line names the install step that fixes it.
+Start most install problems the same way: tell Claude Code "run avs doctor and fix what it says is missing". Each missing line names the install step that fixes it.
 
-- **The doctor says all OK but videos won't render**: the doctor doesn't check the renderer's browser. Ask Claude to run `~/AVS/install.sh --step browser`.
+- **"missing Microsoft's free Visual C++ runtime"**: install it from the link Claude shows. It asks for an administrator, so whoever has the PC's admin password may need to click Yes. Then say "set up AVS" again.
+- **"this PC has an ARM chip"**: AVS for Windows doesn't run on ARM PCs yet, like Snapdragon laptops.
+- **Your antivirus removed a tool**: Claude offers to leave out the reel downloader, the only optional tool. Never turn the antivirus off for AVS.
+- **A step failed twice**: say "make an AVS report" and post the report from your Desktop in the member group.
+
+- **The doctor says all OK but videos won't render**: the doctor doesn't check the renderer's browser. Ask Claude to run `avs install --step browser`.
 - **The install stopped partway**: run the doctor, then let Claude re-run the step it names. Steps that already finished are skipped.
-- **"only N GB free. AVS needs about 12 GB"**: free up space (empty the Trash, move large files), then run the install again.
-- **The AVS folder ended up in the wrong place** (Safari expanded the zip into Downloads, or you unzipped it on the Desktop): before the install finishes, Claude moves that folder to `~/AVS` instead of unzipping a second copy. After the install, never move or rename `~/AVS`.
-- **"Pick a repository" or GitHub questions**: you're in the cloud version of Claude Code. Start a new session in the Claude desktop app's Code tab, and when it asks where to work, pick a folder on your Mac (your home folder is fine), not a cloud environment.
-- **The test video failed**: ask Claude to run `~/AVS/tools/smoke_test.sh` again and show you the last 20 lines, then run the doctor.
+- **"only N GB free. AVS needs about 12 GB"**: free up space (empty the Recycle Bin, move large files), then run the install again.
+- **The AVS folder ended up in the wrong place** (the zip landed in Downloads, or you unzipped it on the Desktop): before the install finishes, Claude moves that folder to `~/AVS` instead of unzipping a second copy. After the install, never move or rename `~/AVS`.
+- **"Pick a repository" or GitHub questions**: you're in the cloud version of Claude Code. Start a new session in the Claude desktop app's Code tab, and when it asks where to work, pick a folder on your PC (your home folder is fine), not a cloud environment.
+- **The test video failed**: ask Claude to run `avs smoke` again and show you the last 20 lines, then run the doctor.
 - **You installed the plugin but nothing happens**: start a new chat. A plugin never shows up in a chat that was already open. Still nothing: you may be in a cloud session (see "Pick a repository" above).
 - **Claude doesn't know what "make a reel" means**: start a new chat. If it still doesn't, run the doctor: the skill line should say OK.
 - **It seems stuck with no output**: Claude Code may be waiting on a permission prompt. Look for it in the window.
@@ -168,11 +173,11 @@ Start most install problems the same way: tell Claude Code "run ~/AVS/tools/doct
 - **The render fails partway**: rendering needs internet for the fonts. Check your connection and try again.
 - **The draft didn't play in the chat**: you're in a terminal, not the Claude desktop app. Claude opens it for you there. Use the Code tab next time to watch it in the chat.
 - **Can't find your finished videos**: they're in `~/AVS/engine/out`. Tell Claude "open my AVS out folder".
-- **A page beside the chat is blank or closed**: tell Claude "open my storyboard again" (or "open my setup page", "show me my style"). Rather have it in your browser? Say "keep it on my Mac".
+- **A page beside the chat is blank or closed**: tell Claude "open my storyboard again" (or "open my setup page", "show me my style"). Rather have it in your browser? Say "keep it on my PC".
 - **No Comment button on a part**: tell Claude in the chat instead, like "part 3, hold it longer". It works the same.
 - **You commented and nothing happened**: press Send to Claude on the comment, or tell Claude in the chat "I left comments on the storyboard".
-- **Still stuck after two fixes**: post in the AdCamp community with the error text or a screenshot.
+- **Still stuck after two fixes**: say "make an AVS report" and post the report in the member group, with the error text or a screenshot.
 
 ## Removing AVS
 
-Tell Claude: "Uninstall AVS." It asks you to type REMOVE to confirm. It copies your finished videos, caption drafts, carousel slides and carousel captions to `~/Desktop/AVS-videos`, then deletes the whole `~/AVS` folder and the AVS skill (the instructions that teach Claude to use AVS). That includes your inbox, your saved looks and any music you added, so ask Claude to copy out any footage, scripts or music you want to keep first. If you installed it from the Plugins panel, remove AdCamp Video System there too (Plugins, Manage plugins), or Claude will offer to set it up again. Your pages beside the chat (storyboards, your style board) stay in your Claude account until you delete them, and Claude offers to delete them for you.
+Tell Claude: "Uninstall AVS." It asks you to type REMOVE to confirm. It copies your finished videos, caption drafts, carousel slides and carousel captions to an AVS-videos folder on your Desktop, then deletes the whole `~/AVS` folder and the AVS skill (the instructions that teach Claude to use AVS). That includes your inbox, your saved looks and any music you added, so ask Claude to copy out any footage, scripts or music you want to keep first. If you installed it from the Plugins panel, remove AdCamp Video System there too (Plugins, Manage plugins), or Claude will offer to set it up again. Your pages beside the chat (storyboards, your style board) stay in your Claude account until you delete them, and Claude offers to delete them for you.

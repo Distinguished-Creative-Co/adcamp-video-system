@@ -32,7 +32,7 @@ AdCamp Video System (AVS) was built by Chris Serra for AdCamp members. These peo
 | Node.js | runs the renderer | MIT |
 | Lucide icons (lucide-react) | the icons in Icon Strike | ISC |
 | uv | installs Python privately | MIT / Apache-2.0 |
-| yt-dlp | brings in reels you like, to study their look. When a download fails, it updates itself from its official GitHub releases and tries again, so it keeps working when sites change | Unlicense source. The macOS app the installer downloads bundles GPLv3+ code, so that download is GPLv3+ |
+| yt-dlp | brings in reels you like, to study their look. On Windows it is installed as its Python package and kept current by AVS updates | Unlicense |
 | Chrome Headless Shell (Google, from Chromium) | draws every frame of your video | BSD-style (Chromium) |
 | The renderer's other packages (React and the libraries Remotion depends on, installed by npm) | building the video | each under its own license, listed in `engine/node_modules` |
 | Hanken Grotesk, Inter, Montserrat, DM Sans, Poppins, Playfair Display, Instrument Serif, DM Serif Display, Fraunces, Anton, Bebas Neue, Oswald, Archivo, Inter Tight, Barlow Condensed, Caveat | caption, card, note and carousel fonts (Google Fonts) | SIL Open Font License 1.1 |

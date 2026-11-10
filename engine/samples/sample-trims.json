@@ -1,4 +1,4 @@
 [
  {"raw": [57.20, 60.00], "why": "sample clip: a false start (\"Four, ... four, all of them\") and the pause before it"},
- {"raw": [100.50, 100.94], "why": "sample clip: a mouth sound in the pause before \"One fee\""}
+ {"raw": [100.58, 100.94], "why": "sample clip: a mouth sound in the pause before \"One fee\" (starts in the quietest moment after \"instead.\", so the cut lands in the pause on every system's word timing)"}
 ]
