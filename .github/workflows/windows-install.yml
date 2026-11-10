@@ -11,7 +11,7 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
       - name: copy AVS to a folder with a space, like C:\Users\Jane Doe\AVS
@@ -31,6 +31,25 @@ jobs:
             ${{ runner.temp }}/Jane Doe/AVS/runtime/logs
             ${{ runner.temp }}/Jane Doe/AVS/runtime/env.json
             ${{ runner.temp }}/Jane Doe/AVS/engine/out/setup-check.png
+            ${{ runner.temp }}/smoke.txt
+            ${{ runner.temp }}/Jane Doe/AVS/engine/out/sample.mp4
+            ${{ runner.temp }}/smoke.txt
+            ${{ runner.temp }}/Jane Doe/AVS/engine/out/sample.mp4
+            ${{ runner.temp }}/Jane Doe/AVS/engine/out/sample-phone.mp4
+            ${{ runner.temp }}/Jane Doe/AVS/engine/qa/sample/stills/sheet.png
+            ${{ runner.temp }}/Jane Doe/AVS/engine/qa/sample/storyboard
+            ${{ runner.temp }}/Jane Doe/AVS/engine/script/sample-scene-map.md
+  windows-planted-failures:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: copy AVS
+        shell: cmd
+        run: robocopy . "%RUNNER_TEMP%\Plant\AVS" /E /XD .git .github /NFL /NDL /NJH /NJS /NP & if %ERRORLEVEL% LSS 8 exit /b 0
+      - name: a failing step fails, as seen from Windows PowerShell 5.1
+        shell: cmd
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .github\ci\planted.ps1
   windows-arm-stop:
     runs-on: windows-11-arm
     timeout-minutes: 15
@@ -52,6 +71,7 @@ jobs:
           sh "$A/bootstrap.sh"
           "$A/avs" install --all --accent '#2E7D5B' --sans inter --serif fraunces --name 'Test Practice' --handle '@avs_test'
           "$A/avs" doctor | tee "$RUNNER_TEMP/doctor.txt"
+          "$A/avs" smoke 2>&1 | tee "$RUNNER_TEMP/smoke.txt"; exit ${PIPESTATUS[0]}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -62,3 +82,5 @@ jobs:
             ${{ runner.temp }}/Jane Doe/AVS/runtime/steps.log
             ${{ runner.temp }}/Jane Doe/AVS/runtime/logs
             ${{ runner.temp }}/Jane Doe/AVS/engine/out/setup-check.png
+            ${{ runner.temp }}/smoke.txt
+            ${{ runner.temp }}/Jane Doe/AVS/engine/out/sample.mp4

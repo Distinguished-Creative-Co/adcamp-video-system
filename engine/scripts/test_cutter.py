@@ -137,8 +137,11 @@ def test_trims_and_breaths():
 
 
 def test_make_reel_recut():
-    """make_reel.sh's step-2 condition, run as written: a trims file newer than the cut forces a fresh cut."""
+    """make_reel.sh's step-2 condition, run as written: a trims file newer than the cut forces a fresh cut. On Windows,
+    where there is no bash, the same condition in the launcher's video chain (tools/avs_reel.py, needs_cut)."""
     print('3. make_reel.sh re-cuts when the trims file changes')
+    if sys.platform == 'win32':
+        return _test_recut_launcher()
     src = open(os.path.join(HERE, 'make_reel.sh')).read()
     lines = [re.search(p, src, re.M) for p in (r'^newer\(\)\{.*$', r'^WX=.*$', r'^CUT=.*$', r'^TRIMS=.*$', r'^if \[ -n "\$TAKES" \].*; then$')]
     if not all(lines):
@@ -154,6 +157,27 @@ def test_make_reel_recut():
         os.utime(os.path.join(d, p), (t, t))
     sh = '\n'.join(['NAME=t', 'TAKES=""'] + [m.group(0) for m in lines[:-1]] + [cond])
     run = lambda: subprocess.run(['bash', '-c', sh], cwd=d, capture_output=True, text=True).stdout.strip()  # noqa: E731
+    check(run() == 'FRESH', 'no trims file: the cut is reused')
+    tf = os.path.join(d, 'script/word-timings/t-trims.json')
+    open(tf, 'w').write('[]')
+    os.utime(tf, (t0 + 20, t0 + 20))
+    check(run() == 'RECUT', 'a trims file newer than the cut (edited by hand) re-cuts')
+    os.utime(os.path.join(d, 'public/host/t-cut.mp4'), (t0 + 30, t0 + 30))
+    check(run() == 'FRESH', 'after the re-cut the cut is reused again')
+    shutil.rmtree(d, ignore_errors=True)
+
+
+def _test_recut_launcher():
+    sys.path.insert(0, os.path.join(os.path.dirname(ROOT), 'tools'))
+    import avs_reel
+    d = tempfile.mkdtemp(prefix='avs-test-recut-')
+    for p in ('script/t.txt', 'script/word-timings/t-wx.json', 'public/host/t-cut.mp4'):
+        os.makedirs(os.path.dirname(os.path.join(d, p)), exist_ok=True)
+        open(os.path.join(d, p), 'w').close()
+    t0 = 1700000000
+    for p, t in (('script/t.txt', t0), ('script/word-timings/t-wx.json', t0), ('public/host/t-cut.mp4', t0 + 10)):
+        os.utime(os.path.join(d, p), (t, t))
+    run = lambda: 'RECUT' if avs_reel.needs_cut('t', root=d) else 'FRESH'  # noqa: E731
     check(run() == 'FRESH', 'no trims file: the cut is reused')
     tf = os.path.join(d, 'script/word-timings/t-trims.json')
     open(tf, 'w').write('[]')

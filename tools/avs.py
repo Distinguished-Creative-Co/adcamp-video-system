@@ -8,6 +8,12 @@ through the avs (Mac) or avs.cmd (Windows) file in the AVS folder.
     avs preflight                         can this computer run AVS? (no download)
     avs doctor                            what is installed and what is missing (changes nothing)
     avs report                            a plain-text report for support, saved on the Desktop
+    avs reel <video> <name> [options]     cut, preview, draft or render a video (avs reel --help)
+    avs run <script> [args]               an engine script with the Python or Node it needs
+    avs open inbox | out | coach          the folder in Finder (Mac) or File Explorer (PC)
+    avs smoke                             the install test: the sample video, then every tool
+    avs update --check | --latest | <zip or folder>    a newer AVS, keeping your reels, brand and music
+    avs uninstall [--yes] [--delete-videos]           remove AVS, your finished videos copied out first
 
 Options for install: --accent '#RRGGBB' --sans <name> --serif <name> --handle @you --name 'Your Name'
   --avatar <photo> --skill-dir <folder> (default ~/.claude/skills)
@@ -618,7 +624,64 @@ def report(a):
     return 0
 
 
+WX_SCRIPTS = ('word_align_x.py',)   # need the speech libraries
+MATTE_SCRIPTS = ('matte_reel.py', 'verify_reel.py', 'draft_badge.py', 'study_example.py', 'gen_host_cutout.py')   # need numpy / MediaPipe
+
+
+PLACES = {'inbox': os.path.join(AVS, 'inbox'), 'out': os.path.join(ENG, 'out'), 'coach': os.path.join(AVS, 'coach'), 'avs': AVS}
+
+
+def open_place(argv):
+    """avs open inbox | out | coach | avs | <a file or folder inside AVS>: Finder on a Mac, File Explorer on a PC."""
+    if not argv:
+        print('usage: avs open inbox | out | coach | avs | <file or folder>')
+        return 2
+    p = PLACES.get(argv[0]) or os.path.abspath(os.path.join(ENG, argv[0]) if not os.path.isabs(argv[0]) else argv[0])
+    if not os.path.exists(p):
+        print('nothing at %s' % p)
+        return 1
+    P.open_path(p)
+    print('opened %s' % p)
+    return 0
+
+
+def run_script(argv):
+    """avs run <script> [args]: an engine script from the engine folder, with the Python (or Node) it needs."""
+    if not argv or argv[0] in ('-h', '--help'):
+        print('usage: avs run <script in engine/scripts> [args]   e.g. avs run approve_reel.py my-reel --by "Name"')
+        return 0 if argv else 2
+    s, rest = os.path.basename(argv[0]), argv[1:]
+    path = os.path.join('scripts', s)
+    if not os.path.exists(os.path.join(ENG, path)):
+        print('no script %s in engine/scripts' % s)
+        return 2
+    if s.endswith('.mjs'):
+        cmd = [P.node_exe(RT), path]
+    elif s in WX_SCRIPTS:
+        cmd = [P.venv_python(WHISPERX), path]
+    elif s in MATTE_SCRIPTS:
+        cmd = [P.venv_python(MATTE), path]
+    else:
+        cmd = [sys.executable, path]
+    return subprocess.run(cmd + rest, cwd=ENG, env=env()).returncode
+
+
 def main(argv):
+    # verbs with their own options take the rest of the line as it is
+    if argv and argv[0] in ('reel', 'run', 'smoke', 'update', 'uninstall', 'open'):
+        os.environ.update(env())
+        if argv[0] == 'run':
+            return run_script(argv[1:])
+        if argv[0] == 'open':
+            return open_place(argv[1:])
+        if argv[0] == 'reel':
+            import avs_reel
+            return avs_reel.main(argv[1:])
+        if argv[0] == 'smoke':
+            import avs_smoke
+            return avs_smoke.main(argv[1:])
+        import avs_manage
+        return avs_manage.main(argv)
     import argparse
     ap = argparse.ArgumentParser(prog='avs', add_help=False)
     ap.add_argument('verb', nargs='?')
