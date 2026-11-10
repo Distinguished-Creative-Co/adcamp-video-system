@@ -16,7 +16,9 @@ foreach ($v in $verbs) {
 }
 $gb = 'C:\Program Files\Git\bin\bash.exe'
 $u = ($A -replace '\\', '/')
-$out = (& $gb --noprofile --norc -c "`"$u/avs.cmd`" doctor" 2>&1 | Out-String); $rc = $LASTEXITCODE
+# single quotes inside: Windows PowerShell 5.1 splits an argument that has double quotes in it (the bug the skill avoids)
+$out = (& $gb --noprofile --norc -c "'$u/avs.cmd' doctor" 2>&1 | Out-String); $rc = $LASTEXITCODE
+if ($rc -ne 0) { Write-Host $out }
 if ($rc -ne 0 -or $out -notmatch 'All set') { $bad += "Git Bash: avs.cmd doctor exit $rc" }
 Write-Host ("skill lint: {0} scripts and {1} verbs from the skill, each run with --help in Windows PowerShell 5.1, plus the launcher from Git Bash" -f $scripts.Count, $verbs.Count)
 if ($bad.Count) { $bad | ForEach-Object { Write-Host "  FAILED $_" }; exit 1 }

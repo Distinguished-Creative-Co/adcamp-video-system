@@ -639,7 +639,7 @@ def report(a):
 
 
 WX_SCRIPTS = ('word_align_x.py',)   # need the speech libraries
-MATTE_SCRIPTS = ('matte_reel.py', 'verify_reel.py', 'draft_badge.py', 'study_example.py', 'gen_host_cutout.py')   # need numpy / MediaPipe
+MATTE_SCRIPTS = ('matte_reel.py', 'verify_reel.py', 'draft_badge.py', 'study_example.py', 'gen_host_cutout.py', 'side_by_side.py')   # need numpy / MediaPipe / Pillow
 
 
 PLACES = {'inbox': os.path.join(AVS, 'inbox'), 'out': os.path.join(ENG, 'out'), 'coach': os.path.join(AVS, 'coach'), 'avs': AVS}

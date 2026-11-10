@@ -32,6 +32,9 @@ def grab(p, t):
 
 def main():
     a = sys.argv[1:]
+    if '--help' in a or '-h' in a:
+        print(__doc__.strip())
+        return
     pos = [x for i, x in enumerate(a) if not x.startswith('--') and (i == 0 or a[i - 1] not in ('--n', '--out'))]
     if len(pos) != 2:
         sys.exit(__doc__)
