@@ -1,0 +1,67 @@
+# AVS for Windows, Phase 0 (PLAN-windows.md): the package as it is, on a stock Windows runner, PATH scrubbed down to
+# Windows itself. Ten yes/no answers before any porting. Throwaway: it changes no AVS file and ships nothing.
+name: windows-spike
+on:
+  workflow_dispatch:
+  push:
+    branches: [windows-preview]
+    paths: ['.github/**']
+permissions:
+  contents: read
+jobs:
+  spike:
+    runs-on: windows-latest
+    timeout-minutes: 150
+    env:
+      NODE_VERSION: 22.23.3
+      UV_VERSION: 0.12.22
+      PY_VERSION: '3.12'
+    defaults:
+      run:
+        shell: cmd
+    steps:
+      - uses: actions/checkout@v4
+      - name: setup
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .github\spike\s0_setup.ps1
+      - name: 1 runner facts
+        continue-on-error: true
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .github\spike\s1_facts.ps1
+      - name: 2 uv, Python, venv
+        continue-on-error: true
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .github\spike\s2_uv.ps1
+      - name: 7 ffmpeg
+        continue-on-error: true
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .github\spike\s7_ffmpeg.ps1
+      - name: 6 Node and the renderer
+        continue-on-error: true
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .github\spike\s6_node.ps1
+      - name: 3 speech libraries
+        continue-on-error: true
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .github\spike\s3_venv.ps1
+      - name: 4 models
+        continue-on-error: true
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .github\spike\s4_models.ps1
+      - name: 5 MediaPipe
+        continue-on-error: true
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .github\spike\s5_mediapipe.ps1
+      - name: 8 word timings
+        continue-on-error: true
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .github\spike\s8_words.ps1
+      - name: 9 launcher shapes
+        continue-on-error: true
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .github\spike\s9_launcher.ps1
+      - name: 10 runtime libraries
+        continue-on-error: true
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .github\spike\s10_dlls.ps1
+      - name: results
+        if: always()
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .github\spike\s99_summary.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-spike
+          retention-days: 14
+          path: |
+            ${{ runner.temp }}/AVS spike/results.md
+            ${{ runner.temp }}/AVS spike/logs
+            ${{ runner.temp }}/AVS spike/out
