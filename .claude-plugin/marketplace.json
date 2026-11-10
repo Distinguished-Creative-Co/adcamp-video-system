@@ -1,14 +1,14 @@
 {
-  "name": "adcamp",
+  "name": "adcamp-windows-preview",
   "owner": {
     "name": "Chris Serra"
   },
-  "description": "AdCamp Video System by Chris Serra.",
+  "description": "AdCamp Video System for Windows (Preview) by Chris Serra.",
   "plugins": [
     {
       "name": "avs",
       "source": "./",
-      "description": "Turns a phone video of you talking, plus your script, into a finished, captioned vertical video (Reels, Shorts, TikTok, Meta ads) on your own Mac."
+      "description": "The Windows preview of AdCamp Video System: turns a phone video of you talking, plus your script, into a finished, captioned vertical video (Reels, Shorts, TikTok, Meta ads) on your own Windows PC. A preview: tested by an automated Windows install, few people have used it on a real PC yet."
     }
   ]
 }

@@ -247,7 +247,7 @@ takes the place of "beside the chat"). "Put it beside the chat again": `avs flag
    (copied, as they sent it). Skip: leave that effect out and say the screenshot line below. Otherwise say the cutting
    line and cut.
 
-Check the footage yourself (don't ask): `ffprobe` it, and grab a gridded still
+Check the footage yourself (don't ask): `avs ffprobe "<video>"` it, and grab a gridded still
 (`avs run grid_still.py <video> qa/<name>/grid.png`, never a plain ffmpeg line: it tone-maps iPhone HDR so
 the still is not blown out) to find the face center (X,Y in 1080x1920) and whether text in the shot reads backwards
 (mirrored front camera: use `--unmirror`, and grab the grid again with `--unmirror` added to that command,

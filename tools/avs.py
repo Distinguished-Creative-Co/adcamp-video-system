@@ -17,6 +17,7 @@ through the avs (Mac) or avs.cmd (Windows) file in the AVS folder.
     avs inbox-done <name> <file> [...]    move a finished video's files into inbox/done/<name>/
     avs clean <name>                      free a finished video's working files (they rebuild if needed)
     avs phone-copy out/<file>.mp4         a small copy for watching in the chat
+    avs ffprobe <args> / avs ffmpeg <args>   AVS's own ffprobe and ffmpeg
   avs run takes @file=<path> as one argument holding that file's text (JSON, quoted words).
     avs smoke                             the install test: the sample video, then every tool
     avs update --check | --latest | <zip or folder>    a newer AVS, keeping your reels, brand and music
@@ -762,7 +763,20 @@ def run_script(argv):
     return subprocess.run(cmd + rest, cwd=ENG, env=env()).returncode
 
 
+def expand_home(a):
+    """~/... in an argument is the home folder, from any shell (PowerShell passes ~ to a program as it is)."""
+    if a.startswith('@file=~'):
+        return '@file=' + os.path.expanduser(a[6:])
+    return os.path.expanduser(a) if a == '~' or a.startswith(('~/', '~\\')) else a
+
+
 def main(argv):
+    argv = [expand_home(a) for a in argv]
+    if argv and argv[0] in ('ffprobe', 'ffmpeg'):   # AVS's own ffmpeg and ffprobe, which are on no PATH but the launcher's
+        if argv[1:2] in (['-h'], ['--help']) and len(argv) == 2:
+            print('usage: avs %s <its usual arguments>   (AVS\'s own %s)' % (argv[0], argv[0])); return 0
+        exe = os.path.join(BIN, argv[0] + P.EXE)
+        return subprocess.run([exe if os.path.exists(exe) else argv[0]] + argv[1:], env=env()).returncode
     # verbs with their own options take the rest of the line as it is
     if argv and argv[0] in ('flag', 'backup-config', 'words', 'inbox-done', 'clean', 'phone-copy'):
         os.environ.update(env())

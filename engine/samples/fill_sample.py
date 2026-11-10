@@ -124,7 +124,8 @@ def main():
     rev = []
     for before, after, why in (('back', 'four', 'the beat before "Four, all of them"'), ('it', 'four', 'the beat before "Four conversations"'),
                                ('scratch', 'and', 'the "ch" of "scratch." running into the pause'),
-                               ('with', 'and', 'the end of "with." and a breath before "And no one\'s"')):
+                               ('with', 'and', 'the end of "with." and a breath before "And no one\'s"'),
+                               ('files', 'you', 'the "s" of "files." running into the pause (Windows times the word a little later)')):
         for k in range(len(wx) - 1):
             if norm(wx[k]['word']) == before and norm(wx[k + 1]['word']) in (after, '4'):
                 rev.append({'a': round(wx[k]['end'] - 0.05, 2), 'b': round(wx[k + 1]['start'] + 0.05, 2),

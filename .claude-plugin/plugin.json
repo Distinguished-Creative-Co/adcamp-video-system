@@ -1,8 +1,8 @@
 {
   "name": "avs",
-  "displayName": "AdCamp Video System",
-  "version": "2.2.1",
-  "description": "Turns a phone video of you talking, plus your script, into a finished, captioned vertical video (Reels, Shorts, TikTok, Meta ads) on your own Mac.",
+  "displayName": "AdCamp Video System for Windows (Preview)",
+  "version": "0.9.0",
+  "description": "The Windows preview of AdCamp Video System: turns a phone video of you talking, plus your script, into a finished, captioned vertical video (Reels, Shorts, TikTok, Meta ads) on your own Windows PC. A preview: tested by an automated Windows install, few people have used it on a real PC yet.",
   "author": {
     "name": "Chris Serra"
   },

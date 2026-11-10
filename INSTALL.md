@@ -54,20 +54,20 @@ If a step FAILS: read the message. Its cause on this PC (disk space, the network
 A second failure of the same step: stop, run `avs report`, and say the step-failed line from the AVS skill. Every step
 is safe to re-run, and finished ones go quickly.
 
-1. `check` (no download): the chip, Windows version, disk, memory and Microsoft's Visual C++ runtime. A stop: say its
+1. `avs install --step check` (no download): the chip, Windows version, disk, memory and Microsoft's Visual C++ runtime. A stop: say its
    line from the AVS skill (an ARM chip, not enough space, the runtime with the link it printed) and stop there. Its
    memory note: say once that videos will take longer.
-2. `uv`
-3. `python`
-4. `node`
-5. `ffmpeg`
-6. `npm`
-7. `browser`
-8. `still` (one test image from the renderer, before the big downloads. A failure here is worth a report right away)
-9. `venv` (the big one, about 1.8 GB, several minutes)
-10. `models` (about 1 GB)
-11. `cutout` (about 200 MB, the person-cutout library and its model)
-12. `ytdlp` (brings in reels they like so AVS can build a style from them. It's optional: if it fails twice, or their
+2. `avs install --step uv`
+3. `avs install --step python`
+4. `avs install --step node`
+5. `avs install --step ffmpeg`
+6. `avs install --step npm`
+7. `avs install --step browser`
+8. `avs install --step still` (one test image from the renderer, before the big downloads. A failure here is worth a report right away)
+9. `avs install --step venv` (the big one, about 1.8 GB, several minutes)
+10. `avs install --step models` (about 1 GB)
+11. `avs install --step cutout` (about 200 MB, the person-cutout library and its model)
+12. `avs install --step ytdlp` (brings in reels they like so AVS can build a style from them. It's optional: if it fails twice, or their
     antivirus removes it, say the antivirus line below and carry on without it)
 13. **brand**: these questions, one at a time. Picking up a stopped setup: skip the name, handle and photo questions
     when `engine/src/brand.json` already has a name, handle or avatar (confirm them in one line). Always ask the color
@@ -91,8 +91,8 @@ is safe to re-run, and finished ones go quickly.
     The photo becomes engine/public/inserts/avatar.png). When it prints "a dark color", tell them in one line: "Your
     color is dark, so words over your video and photos use a lighter shade of it to stay readable. Light slides keep it
     exactly."
-14. `env`
-15. `skill` (from the Plugins panel it just confirms the plugin provides the skill).
+14. `avs install --step env`
+15. `avs install --step skill` (from the Plugins panel it just confirms the plugin provides the skill).
 16. Run `avs doctor`. All OK: say "Everything's installed." Anything else: fix what it names, then tell them in
     one plain sentence what was missing and that it's sorted.
 
