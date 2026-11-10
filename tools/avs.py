@@ -10,7 +10,14 @@ through the avs (Mac) or avs.cmd (Windows) file in the AVS folder.
     avs report                            a plain-text report for support, saved on the Desktop
     avs reel <video> <name> [options]     cut, preview, draft or render a video (avs reel --help)
     avs run <script> [args]               an engine script with the Python or Node it needs
-    avs open inbox | out | coach          the folder in Finder (Mac) or File Explorer (PC)
+    avs open inbox | out | coach          the folder in Finder (Mac) or File Explorer (PC), or a file or page
+    avs flag installed|local-pages [--off]   setup finished / pages in the browser instead of beside the chat
+    avs backup-config <name>              save a video's config inside the install before a fix
+    avs words <transcript json>           what was said, as plain text
+    avs inbox-done <name> <file> [...]    move a finished video's files into inbox/done/<name>/
+    avs clean <name>                      free a finished video's working files (they rebuild if needed)
+    avs phone-copy out/<file>.mp4         a small copy for watching in the chat
+  avs run takes @file=<path> as one argument holding that file's text (JSON, quoted words).
     avs smoke                             the install test: the sample video, then every tool
     avs update --check | --latest | <zip or folder>    a newer AVS, keeping your reels, brand and music
     avs uninstall [--yes] [--delete-videos]           remove AVS, your finished videos copied out first
@@ -619,7 +626,11 @@ def report(a):
                     print('\n--- runtime/logs/%s.log (last 30) ---' % e['step'])
                     print(''.join(open(lg, encoding='utf-8', errors='replace').readlines()[-30:]))
     out = os.path.join(P.desktop(), 'AVS-report-%s.txt' % datetime.datetime.now().strftime('%Y%m%d-%H%M'))
-    open(out, 'w', encoding='utf-8').write(buf.getvalue())
+    text = buf.getvalue()
+    home = os.path.expanduser('~')
+    for h in {home, home.replace('\\', '/'), home.replace('/', '\\')}:   # their name never leaves the PC in a path
+        text = text.replace(h, '~')
+    open(out, 'w', encoding='utf-8').write(text)
     print('Report saved: %s' % out)
     return 0
 
@@ -629,13 +640,96 @@ MATTE_SCRIPTS = ('matte_reel.py', 'verify_reel.py', 'draft_badge.py', 'study_exa
 
 
 PLACES = {'inbox': os.path.join(AVS, 'inbox'), 'out': os.path.join(ENG, 'out'), 'coach': os.path.join(AVS, 'coach'), 'avs': AVS}
+FLAGS = {'installed': '.installed', 'local-pages': '.local-pages'}
+
+
+def small(verb, argv):
+    """The one-liners the skill used to write in shell, as launcher verbs that run the same on a Mac and a PC."""
+    import glob
+    if argv and argv[0] in ('-h', '--help'):
+        print([l.strip() for l in __doc__.splitlines() if l.strip().startswith('avs %s' % verb)][0] if any(
+            l.strip().startswith('avs %s' % verb) for l in __doc__.splitlines()) else 'avs %s' % verb)
+        return 0
+    if verb == 'flag':   # avs flag installed | local-pages [--off]
+        if not argv or argv[0] not in FLAGS:
+            print('usage: avs flag installed | local-pages [--off]'); return 2
+        f = os.path.join(RT, FLAGS[argv[0]])
+        if '--off' in argv:
+            if os.path.exists(f):
+                os.remove(f)
+            print('%s off' % argv[0])
+        else:
+            os.makedirs(RT, exist_ok=True); open(f, 'a').close(); print('%s on' % argv[0])
+        return 0
+    if verb == 'backup-config':   # avs backup-config <name>: the config saved inside the install before a fix
+        if not argv:
+            print('usage: avs backup-config <name>'); return 2
+        src = os.path.join(ENG, 'src', 'methodology', 'reels', argv[0] + '.config.ts')
+        if not os.path.exists(src):
+            print('no config for %s' % argv[0]); return 1
+        dst = os.path.join(ENG, 'qa', argv[0], 'before-fix-%s.config.ts' % datetime.datetime.now().strftime('%Y%m%d-%H%M%S'))
+        os.makedirs(os.path.dirname(dst), exist_ok=True); shutil.copy2(src, dst)
+        print('SAVED %s' % os.path.relpath(dst, ENG).replace(os.sep, '/')); return 0
+    if verb == 'words':   # avs words <transcript json>: what was said, as plain text
+        if not argv:
+            print('usage: avs words <script/word-timings/<file>-wx.json>'); return 2
+        p = argv[0] if os.path.isabs(argv[0]) else os.path.join(ENG, argv[0])
+        if not os.path.isfile(p):
+            print('no transcript at %s' % argv[0]); return 1
+        w = json.load(open(p, encoding='utf-8'))
+        w = w['words'] if isinstance(w, dict) else w
+        print(' '.join(x['word'] for x in w)); return 0
+    if verb == 'inbox-done':   # avs inbox-done <name> <file> [<file> ...]: into inbox/done/<name>/, never over a file
+        if len(argv) < 2:
+            print('usage: avs inbox-done <name> <file in the inbox> [...]'); return 2
+        d = os.path.join(AVS, 'inbox', 'done', argv[0]); os.makedirs(d, exist_ok=True)
+        for f in argv[1:]:
+            src = f if os.path.isabs(f) else os.path.join(AVS, 'inbox', f)
+            dst = os.path.join(d, os.path.basename(src))
+            if not os.path.exists(src):
+                print('not in the inbox: %s' % f)
+            elif os.path.exists(dst):
+                print('kept where it is (done/%s/%s already exists): %s' % (argv[0], os.path.basename(src), f))
+            else:
+                shutil.move(src, dst); print('moved %s' % os.path.basename(src))
+        return 0
+    if verb == 'clean':   # avs clean <name>: the working files any later preview or render rebuilds (about 250 MB a video)
+        if not argv:
+            print('usage: avs clean <name>'); return 2
+        n = argv[0]
+        gone = 0
+        for rel in ('qa/%s/picture.mp4', 'qa/%s/mix.wav', 'qa/%s/draft', 'qa/%s/preview', 'qa/%s/stills', 'out/drafts/%s-DRAFT.mp4',
+                    'public/host/%s-cut-c.mp4', 'public/host/%s-cut-c.mp4.json', 'public/host/%s-cut-hi-c.mp4', 'public/host/%s-cut-hi-c.mp4.json',
+                    'qa/%s/storyboard/covers/.measure'):
+            p = os.path.join(ENG, rel % n)
+            if os.path.isdir(p):
+                shutil.rmtree(p, ignore_errors=True); gone += 1
+            elif os.path.exists(p):
+                os.remove(p); gone += 1
+        for pat in ('out/drafts/%s-b??-?.mp4', 'public/host/%s-thumb-*', 'public/host/%s-fg-*'):   # exact names: another video's never match
+            for p in glob.glob(os.path.join(ENG, pat % glob.escape(n))):
+                os.remove(p); gone += 1
+        print('freed %d working files of %s' % (gone, n)); return 0
+    if verb == 'phone-copy':   # avs phone-copy out/<file>.mp4: a small copy for watching in the chat
+        if not argv:
+            print('usage: avs phone-copy out/<file>.mp4'); return 2
+        src = argv[0] if os.path.isabs(argv[0]) else os.path.join(ENG, argv[0])
+        dst = os.path.splitext(src)[0] + '-phone.mp4'
+        rc = subprocess.run([os.path.join(BIN, 'ffmpeg' + P.EXE) if os.path.exists(os.path.join(BIN, 'ffmpeg' + P.EXE)) else 'ffmpeg', '-v', 'error', '-y',
+                             '-i', src, '-vf', 'scale=540:960', '-crf', '30', '-c:a', 'aac', '-b:a', '96k', dst], env=env()).returncode
+        if rc == 0:
+            print('PHONE COPY %s' % os.path.relpath(dst, ENG).replace(os.sep, '/'))
+        return rc
+    return 2
 
 
 def open_place(argv):
     """avs open inbox | out | coach | avs | <a file or folder inside AVS>: Finder on a Mac, File Explorer on a PC."""
-    if not argv:
-        print('usage: avs open inbox | out | coach | avs | <file or folder>')
-        return 2
+    if not argv or argv[0] in ('-h', '--help'):
+        print('usage: avs open inbox | out | coach | avs | <file, folder or http page>')
+        return 0 if argv else 2
+    if argv[0].startswith(('http://', 'https://')):   # a page a local server prints
+        P.open_path(argv[0]); print('opened %s' % argv[0]); return 0
     p = PLACES.get(argv[0]) or os.path.abspath(os.path.join(ENG, argv[0]) if not os.path.isabs(argv[0]) else argv[0])
     if not os.path.exists(p):
         print('nothing at %s' % p)
@@ -651,6 +745,8 @@ def run_script(argv):
         print('usage: avs run <script in engine/scripts> [args]   e.g. avs run approve_reel.py my-reel --by "Name"')
         return 0 if argv else 2
     s, rest = os.path.basename(argv[0]), argv[1:]
+    # @file=<path>: that file's text as ONE argument, so JSON and quoted words never cross a Windows shell's quoting
+    rest = [open(x[6:], encoding='utf-8').read().strip() if x.startswith('@file=') and os.path.isfile(x[6:]) else x for x in rest]
     path = os.path.join('scripts', s)
     if not os.path.exists(os.path.join(ENG, path)):
         print('no script %s in engine/scripts' % s)
@@ -668,6 +764,9 @@ def run_script(argv):
 
 def main(argv):
     # verbs with their own options take the rest of the line as it is
+    if argv and argv[0] in ('flag', 'backup-config', 'words', 'inbox-done', 'clean', 'phone-copy'):
+        os.environ.update(env())
+        return small(argv[0], argv[1:])
     if argv and argv[0] in ('reel', 'run', 'smoke', 'update', 'uninstall', 'open'):
         os.environ.update(env())
         if argv[0] == 'run':

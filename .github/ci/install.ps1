@@ -17,5 +17,7 @@ if ($installed -eq 0 -and $doc -eq 0) {
 }
 & "$A\avs.cmd" report
 Get-ChildItem -LiteralPath ([Environment]::GetFolderPath('Desktop')) -Filter 'AVS-report-*.txt' | Copy-Item -Destination "$A\runtime\logs\" -ErrorAction SilentlyContinue
-Write-Host "install exit $installed, doctor exit $doc, smoke exit $smoke"
-if ($installed -ne 0 -or $doc -ne 0 -or $smoke -ne 0) { exit 1 }
+$lint = 1
+if ($installed -eq 0 -and $doc -eq 0) { & powershell -NoProfile -ExecutionPolicy Bypass -File "$env:GITHUB_WORKSPACE\.github\ci\skill-lint.ps1"; $lint = $LASTEXITCODE }
+Write-Host "install exit $installed, doctor exit $doc, smoke exit $smoke, skill lint exit $lint"
+if ($installed -ne 0 -or $doc -ne 0 -or $smoke -ne 0 -or $lint -ne 0) { exit 1 }

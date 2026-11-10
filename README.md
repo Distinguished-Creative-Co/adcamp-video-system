@@ -28,32 +28,37 @@ Claude Code, reads your transcript and preview stills to build the edit, and sho
 - A video filmed vertically, with a pause between sentences. If you make a mistake, say "reset, reset" and start
   the sentence again. AVS keeps your last clean take.
 
-## Install (20 to 40 minutes, mostly downloads, then a test video of 10 to 15 minutes)
+## Install (up to about an hour and about 3 GB, mostly downloads and a test video)
 
-Easiest, in the Claude desktop app:
+Neither way below needs git or any developer tools. Claude asks your OK before it runs each step: allow it each time.
 
-1. Open the **Code** tab. Click the **+** next to the message box, then **Plugins**, then **Browse plugins**.
-2. Click **Add**, then **Add marketplace**, then **Add from a repository**. Paste this link and click **Sync**:
+Easiest: in the Claude desktop app, open the **Code** tab, start a new chat and paste this. It looks technical, but you
+don't need to understand it, just paste it:
 
 ```
-https://github.com/Distinguished-Creative-Co/adcamp-video-system
+Install AdCamp Video System for me from https://github.com/Distinguished-Creative-Co/adcamp-video-system into ~/AVS (download it as a tar.gz with curl, not with git), then open ~/AVS/INSTALL.md and follow it step by step. Tell me what each step downloads and how big it is before it starts, and ask me before anything that needs an account, a password, or a choice from me.
 ```
 
-3. Install **AdCamp Video System** from the list.
+Or from the Plugins panel:
+
+1. In the **Code** tab, click the **+** next to the message box, then **Plugins**, then **Browse plugins**.
+2. Click **Add**, then **Add marketplace**, then **Add from a repository**. Paste this link exactly as it is and click
+   **Sync**:
+
+```
+https://raw.githubusercontent.com/Distinguished-Creative-Co/adcamp-video-system/main/marketplace.json
+```
+
+   If it says the marketplace already exists, you added AVS before. Go back to **Browse plugins** and carry on.
+3. Install **AdCamp Video System** from the list in **Browse plugins**.
 4. Start a new chat and say:
 
 ```
 Set up AVS
 ```
 
-Or start a new chat in the Code tab and paste this instead:
-
-```
-Install AdCamp Video System for me from https://github.com/Distinguished-Creative-Co/adcamp-video-system into ~/AVS (download it as a tar.gz with curl, not with git), then open ~/AVS/INSTALL.md and follow it step by step. Tell me what each step downloads and how big it is before it starts, and ask me before anything that needs an account, a password, or a choice from me.
-```
-
-If you have the zip instead (`AVS-2.2.0.zip`), put it in Downloads and say "Install AdCamp Video System from
-~/Downloads/AVS-2.2.0.zip into ~/AVS, then follow ~/AVS/INSTALL.md".
+If you have the zip instead (`AVS-2.2.1.zip`), put it in Downloads and say "Install AdCamp Video System from
+~/Downloads/AVS-2.2.1.zip into ~/AVS, then follow ~/AVS/INSTALL.md".
 
 Claude walks you through everything, shows you your name in four font pairs so you can pick, makes a test video,
 helps you set your look, then gets you straight into your first video.

@@ -1,9 +1,22 @@
 # AdCamp Video System for Windows: the one PowerShell step. It checks the chip, fetches uv (checksum checked),
 # installs AVS's own Python 3.12 into runtime\python and makes runtime\base, the Python the launcher runs on.
 # Everything after this goes through avs.cmd in this folder.
-#   powershell -NoProfile -ExecutionPolicy Bypass -File bootstrap.ps1
+#   powershell -NoProfile -ExecutionPolicy Bypass -File bootstrap.ps1 [-FromPlugin]
+param([switch]$FromPlugin)   # from the Plugins panel: copy AVS into the home folder first, then set it up there
 $ErrorActionPreference = 'Continue'
 $AVS = $PSScriptRoot
+if ($FromPlugin) {
+  $dst = Join-Path $HOME 'AVS'
+  if (Test-Path -LiteralPath (Join-Path $dst 'runtime\base\Scripts\python.exe')) { Write-Host "  OK AVS is already set up in $dst. To bring it to this version: avs.cmd update `"$AVS`""; exit 0 }
+  if ((Test-Path -LiteralPath $dst) -and -not (Test-Path -LiteralPath (Join-Path $dst 'engine'))) { Write-Host "  FAILED $dst exists but is not AVS. Move or rename it, then run this again."; exit 1 }
+  & robocopy $AVS $dst /E /XD .git .claude-plugin /NFL /NDL /NJH /NJS /NP | Out-Null
+  if ($LASTEXITCODE -ge 8) { Write-Host '  FAILED AVS could not be copied into your home folder. Run this again.'; exit 1 }
+  New-Item -ItemType Directory -Force -Path (Join-Path $dst 'runtime') | Out-Null
+  [IO.File]::WriteAllText((Join-Path $dst 'runtime\.via-plugin'), $AVS)
+  Write-Host "  OK AVS copied to $dst (the skill comes from the plugin)"
+  & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $dst 'bootstrap.ps1')
+  exit $LASTEXITCODE
+}
 $RT = Join-Path $AVS 'runtime'
 $UV_VERSION = '0.12.22'
 $UV_SHA = 'ea1397797a0ca15f63516dd0f49c2dde9776db9be5861cab152ebe8ad199894d'
