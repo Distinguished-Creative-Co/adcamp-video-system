@@ -6,7 +6,7 @@ video. This file tells you what to do when you open this folder.
 ## Not installed yet (no `runtime/base` in this folder)
 
 1. This folder belongs at `~/AVS`. If it is somewhere else (Downloads, Desktop, a subfolder, or a
-   `adcamp-video-system-main` folder from GitHub), move it there first (in PowerShell:
+   `adcamp-video-system-windows-preview` folder from GitHub), move it there first (in PowerShell:
    `Move-Item "<this folder>" "$HOME\AVS"`), then work from `~/AVS`.
    Do not make a second copy by downloading or unzipping again.
 2. Open `INSTALL.md` and follow it step by step. Tell the person what each step downloads and

@@ -10,4 +10,4 @@ Set it up once, about two minutes. Both files are in your AVS folder: tell Claud
 
 After an AVS update, replace `AVS-Guide.md` in the project with the new one from the same folder.
 
-It answers from the AVS guide. It's set up to say so when the guide doesn't cover something, and to send you to the AdCamp community for anything still stuck after two tries.
+It answers from the AVS guide. It's set up to say so when the guide doesn't cover something, and to send you to the AdCamp member group for anything still stuck after two tries.

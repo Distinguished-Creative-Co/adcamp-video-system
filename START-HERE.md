@@ -7,11 +7,11 @@
 >
 > What hasn't been checked yet: a person using it in the Claude app on a home or office PC. You may be one of the first.
 >
-> What it takes: up to about an hour and about 3 GB of downloads. The first minute checks your PC. If your PC isn't a
-> fit, AVS says so right then and downloads nothing.
+> What it takes: about an hour, more on a slower PC, and about 12 GB of free space. The first minute checks your PC. If
+> your PC isn't a fit, AVS says so right then and downloads nothing.
 >
-> If a step fails: AVS stops and tells you which step. Nothing outside the AVS folder is changed. Say "make an AVS
-> report" and post the report in the member group. Say "uninstall AVS" and it's gone.
+> If a step fails: AVS stops and tells you which step. It changes no Windows settings. Say "make an AVS report" and
+> post the report in the AdCamp member group. Say "uninstall AVS" and it's gone.
 >
 > Have a Mac? AVS for Mac is the finished version.
 
@@ -44,16 +44,18 @@ you or your videos is sent.
 
 - A Windows PC: Windows 11, or Windows 10 version 1809 or newer, with an Intel or AMD chip, and about 12 GB free.
   16 GB of memory is recommended. With 8 GB it works, but videos take longer, and that hasn't been tested yet.
-  A laptop with an ARM chip (like a Snapdragon laptop) won't work yet.
+  PCs with an ARM chip (like a Snapdragon laptop) aren't supported.
+- Microsoft's free Visual C++ runtime. Most PCs already have it. If yours doesn't, AVS stops at the first check and
+  gives you Microsoft's link. Installing it may ask for the PC's admin password (on a work PC, ask whoever looks after it).
 - The Claude desktop app for Windows, and a Claude plan that includes Claude Code. Everything else installs for you.
 - One license note: Remotion (the part that draws the video) is free for individuals and for companies with up to
   3 employees. A company with 4 or more employees needs a paid Remotion company license (remotion.pro).
 - A video filmed vertically, with a pause between sentences. If you make a mistake, say "reset, reset" and start
   the sentence again. AVS keeps your last clean take.
 
-## Install (up to about an hour and about 3 GB, mostly downloads and a test video)
+## Install (about an hour, mostly downloads and a test video)
 
-Neither way below needs git or any developer tools, and neither asks for an administrator. Claude asks your OK
+Neither way below needs git or any developer tools, and AVS itself never asks for an administrator. Claude asks your OK
 before it runs each step: allow it each time.
 
 Easiest: in the Claude desktop app, open the **Code** tab, start a new chat and paste this. It looks technical, but
@@ -102,6 +104,6 @@ finished video. Nothing is ever posted for you.
 
 ## Stuck?
 
-Say "make an AVS report" and post the report from your Desktop in the member group. It has no videos and no
+Say "make an AVS report" and post the report from your Desktop in the AdCamp member group. It has no videos and no
 personal details. Or set up **Coach Chris**, an AI version of Chris that answers from the AVS guide, in about two
 minutes: tell Claude "show me the Coach Chris setup steps".

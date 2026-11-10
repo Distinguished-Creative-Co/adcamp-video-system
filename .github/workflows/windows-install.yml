@@ -27,6 +27,7 @@ jobs:
           retention-days: 14
           path: |
             ${{ runner.temp }}/doctor.txt
+            ${{ runner.temp }}/size.txt
             ${{ runner.temp }}/Jane Doe/AVS/runtime/steps.log
             ${{ runner.temp }}/Jane Doe/AVS/runtime/logs
             ${{ runner.temp }}/Jane Doe/AVS/runtime/env.json

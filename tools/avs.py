@@ -83,7 +83,7 @@ def env():
     e.update({'AVS_HOME': AVS, 'AVS_PYTHON': P.venv_python(WHISPERX), 'AVS_MATTE_PYTHON': P.venv_python(MATTE),
               'AVS_MODELS': os.path.join(MODELS, 'mediapipe'), 'HF_HOME': os.path.join(MODELS, 'hf'),
               'TORCH_HOME': os.path.join(MODELS, 'torch'), 'UV_PYTHON_INSTALL_DIR': os.path.join(RT, 'python'),
-              'UV_CACHE_DIR': os.path.join(RT, 'uv-cache'), 'PYTHONUTF8': '1', 'PYANNOTE_METRICS_ENABLED': '0',
+              'UV_CACHE_DIR': os.path.join(RT, 'uv-cache'), 'npm_config_cache': os.path.join(RT, 'npm-cache'), 'PYTHONUTF8': '1', 'PYANNOTE_METRICS_ENABLED': '0',
               'HF_HUB_DISABLE_TELEMETRY': '1'})
     return e
 
@@ -291,6 +291,7 @@ def step_npm(a):
         return 'present'
     run([P.node_exe(RT), P.npm_cli(RT), 'ci', '--no-audit', '--no-fund', '--loglevel=error'], 'npm', cwd=ENG)
     shutil.copy2(lock, mark)
+    shutil.rmtree(os.path.join(RT, 'npm-cache'), ignore_errors=True)   # npm's download cache, never needed again
     ok('renderer packages installed in engine/node_modules')
     return 'installed'
 
@@ -608,7 +609,7 @@ def preflight(a):
 
 
 def report(a):
-    """Everything support needs, nothing private beyond this computer's own paths: saved on the Desktop."""
+    """Everything support needs, with no videos and no personal details: saved on the Desktop. The home folder becomes ~."""
     import io
     import contextlib
     buf = io.StringIO()
@@ -629,7 +630,8 @@ def report(a):
     out = os.path.join(P.desktop(), 'AVS-report-%s.txt' % datetime.datetime.now().strftime('%Y%m%d-%H%M'))
     text = buf.getvalue()
     home = os.path.expanduser('~')
-    for h in {home, home.replace('\\', '/'), home.replace('/', '\\')}:   # their name never leaves the PC in a path
+    win = home.replace('/', '\\')
+    for h in (win.replace('\\', '\\\\'), win, home.replace('\\', '/')):   # their name never leaves the PC in a path, JSON-escaped ones included
         text = text.replace(h, '~')
     open(out, 'w', encoding='utf-8').write(text)
     print('Report saved: %s' % out)

@@ -11,7 +11,7 @@
       "description": "The Windows preview of AdCamp Video System: turns a phone video of you talking, plus your script, into a finished, captioned vertical video (Reels, Shorts, TikTok, Meta ads) on your own Windows PC. A preview: tested by an automated Windows install, few people have used it on a real PC yet.",
       "source": {
         "source": "archive",
-        "sha256": "89f77f46e4199ebc029dc36c04fc8cfa62a7504654ec6cdcdc20090d0427160e",
+        "sha256": "b0f5489f68baca93a6e66012c5a31b56bf699e9907400a13038e7e0c64d010b3",
         "url": "https://github.com/Distinguished-Creative-Co/adcamp-video-system/releases/download/windows-v0.9.0/AVS-windows-0.9.0-plugin.zip"
       }
     }

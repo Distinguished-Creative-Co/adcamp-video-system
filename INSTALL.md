@@ -23,6 +23,8 @@ splits it): write it to a file in your scratchpad and pass `@file=<that file>` t
   `Remove-Item "$HOME\AVS-unpack"` (it's empty now). The zip stays in Downloads.
   An AVS folder somewhere else (Downloads, the Desktop) with no `runtime` folder in it: move it to `~/AVS` with
   `Move-Item` rather than downloading a second copy.
+- The lines to say to the person come from "What the member hears" in the AVS skill. If the skill isn't loaded in this
+  chat (they pasted the install line), read that section of `~/AVS/skills/avs/SKILL.md` now.
 - Then the bootstrap, which checks the chip and fetches uv and AVS's own Python (about 50 MB):
   `powershell -NoProfile -ExecutionPolicy Bypass -File "$HOME\AVS\bootstrap.ps1"`. It stops on an ARM PC with one
   plain line: say the ARM line from the AVS skill and stop.
@@ -109,8 +111,9 @@ Run the test. It proves the install and shows them AVS's everyday look on a real
 avs smoke
 ```
 
-It cuts the included sample, puts it in the Clean Talk look and renders it, then checks the tools. On a PC that takes
-longer than on a Mac, often 20 to 40 minutes. Run it in the background and check back. When it passes, make a phone
+It cuts the included sample, puts it in the Clean Talk look and renders it, then checks the tools. On a PC that often
+takes 20 to 40 minutes. Tell the person first: "Last setup step: a test video. On a PC it often takes 20 to 40 minutes.
+Nothing is stuck, I'll tell you when it's ready." Run it in the background and check back. When it passes, make a phone
 copy (`avs phone-copy out/sample.mp4`), put it in the chat (SendUserFile, display render, else
 `avs open out/sample-phone.mp4`) and say: "Here's a test video, in Clean Talk, one of four starter looks. Next, yours."
 (A dark brand color: the words show in a lighter shade of it, as you told them at the brand step.)

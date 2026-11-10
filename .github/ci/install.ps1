@@ -15,6 +15,8 @@ if ($installed -eq 0 -and $doc -eq 0) {
   $o = "$A\engine\out"
   if (Test-Path -LiteralPath "$o\sample.mp4") { & "$A\runtime\bin\ffmpeg.exe" -v error -y -i "$o\sample.mp4" -vf scale=720:1280 -c:v libx264 -crf 24 -c:a aac -b:a 128k -movflags +faststart "$o\sample-phone.mp4" }
 }
+$sz = (Get-ChildItem -LiteralPath $A -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+"AVS folder after setup and the test video: {0:N1} GB" -f ($sz / 1GB) | Tee-Object -FilePath (Join-Path $env:RUNNER_TEMP 'size.txt')
 & "$A\avs.cmd" report
 Get-ChildItem -LiteralPath ([Environment]::GetFolderPath('Desktop')) -Filter 'AVS-report-*.txt' | Copy-Item -Destination "$A\runtime\logs\" -ErrorAction SilentlyContinue
 $lint = 1
