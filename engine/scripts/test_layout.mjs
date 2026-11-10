@@ -252,7 +252,7 @@ adNote = `ad safe zone: this reel made paid keeps all ${adBoxes} blocks of words
 if (existsSync(path.join(root, 'public', cfg.src))) {
   const py = 'import json, sys\nsys.path.insert(0, "scripts")\nimport scene_map\nname, src, frames = sys.argv[1], sys.argv[2], int(sys.argv[3])\n' +
     'n = scene_map.cut_frames({"src": src})\nprint(json.dumps([n] + [scene_map.cut_length_error(name, f, n) for f in (frames, n + 36, n - 36)]))';
-  const [cutF, asIs, long, short] = JSON.parse(execFileSync('python3', ['-c', py, name, cfg.src, String(cfg.frames)], { cwd: root, encoding: 'utf8' }));
+  const [cutF, asIs, long, short] = JSON.parse(execFileSync(process.platform === 'win32' ? (process.env.AVS_PYTHON || 'python') : 'python3', ['-c', py, name, cfg.src, String(cfg.frames)], { cwd: root, encoding: 'utf8' }));
   check(!asIs, `the scene map refuses this reel's length: ${asIs}`);
   for (const [err, f, label] of SELF ? [[long, cutF + 36, 'longer'], [short, cutF - 36, 'shorter']] : []) {
     check(err && err.includes(`"frames" is ${f} `) && err.includes(`runs ${cutF} frames`),

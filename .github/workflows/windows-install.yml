@@ -1,0 +1,64 @@
+# AVS for Windows, Phase 2 (PLAN-windows.md): the launcher installs AVS from a cold start. Windows PowerShell 5.1,
+# PATH scrubbed down to Windows itself, the AVS folder at a path with a space. An ARM PC must get the plain stop. The same
+# launcher installs on a Mac runner. Nothing here touches main or the Mac package.
+name: windows-install
+on:
+  workflow_dispatch:
+  push:
+    branches: [windows-preview]
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: copy AVS to a folder with a space, like C:\Users\Jane Doe\AVS
+        shell: cmd
+        run: robocopy . "%RUNNER_TEMP%\Jane Doe\AVS" /E /XD .git .github /NFL /NDL /NJH /NJS /NP & if %ERRORLEVEL% LSS 8 exit /b 0
+      - name: bootstrap, every setup step, the checkup (Windows PowerShell 5.1)
+        shell: cmd
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .github\ci\install.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-install
+          retention-days: 14
+          path: |
+            ${{ runner.temp }}/doctor.txt
+            ${{ runner.temp }}/Jane Doe/AVS/runtime/steps.log
+            ${{ runner.temp }}/Jane Doe/AVS/runtime/logs
+            ${{ runner.temp }}/Jane Doe/AVS/runtime/env.json
+            ${{ runner.temp }}/Jane Doe/AVS/engine/out/setup-check.png
+  windows-arm-stop:
+    runs-on: windows-11-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: the bootstrap stops with one plain sentence on an ARM PC
+        shell: cmd
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .github\ci\arm-stop.ps1
+  mac:
+    runs-on: macos-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: the same launcher on a Mac, PATH scrubbed, a folder with a space
+        shell: bash
+        run: |
+          A="$RUNNER_TEMP/Jane Doe/AVS"; mkdir -p "$A"; rsync -a --exclude .git --exclude .github ./ "$A/"
+          export PATH=/usr/bin:/bin:/usr/sbin:/sbin
+          sh "$A/bootstrap.sh"
+          "$A/avs" install --all --accent '#2E7D5B' --sans inter --serif fraunces --name 'Test Practice' --handle '@avs_test'
+          "$A/avs" doctor | tee "$RUNNER_TEMP/doctor.txt"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mac-install
+          retention-days: 14
+          path: |
+            ${{ runner.temp }}/doctor.txt
+            ${{ runner.temp }}/Jane Doe/AVS/runtime/steps.log
+            ${{ runner.temp }}/Jane Doe/AVS/runtime/logs
+            ${{ runner.temp }}/Jane Doe/AVS/engine/out/setup-check.png

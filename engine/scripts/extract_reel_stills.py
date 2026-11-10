@@ -16,6 +16,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
+REMOTION = ['node', os.path.join(ROOT, 'node_modules', '@remotion', 'cli', 'remotion-cli.js')]   # never npx: on Windows npx is a .cmd file, which Python cannot start by bare name
 sys.path.insert(0, HERE)
 import reel_config  # noqa: E402
 
@@ -66,11 +67,11 @@ def main():
     paths = []
     if preview:
         bundle = os.path.join(ROOT, '.qa-bundle')
-        subprocess.run(['npx', 'remotion', 'bundle', 'src/methodology/index.ts', '--out-dir', bundle, '--log=error'],
+        subprocess.run(REMOTION + ['bundle', 'src/methodology/index.ts', '--out-dir', bundle, '--log=error'],
                        cwd=ROOT, check=True)
         for f in frames:
             p = os.path.join(d, 'f%04d.png' % f)
-            subprocess.run(['npx', 'remotion', 'still', bundle, name, p, '--frame=%d' % f, '--log=error'],
+            subprocess.run(REMOTION + ['still', bundle, name, p, '--frame=%d' % f, '--log=error'],
                            cwd=ROOT, check=True, capture_output=True)
             paths.append(p)
     else:

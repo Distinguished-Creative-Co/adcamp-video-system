@@ -20,6 +20,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
+REMOTION = ['node', os.path.join(ROOT, 'node_modules', '@remotion', 'cli', 'remotion-cli.js')]   # never npx: on Windows npx is a .cmd file, which Python cannot start by bare name
 sys.path.insert(0, HERE)
 import reel_config  # noqa: E402
 import styles_lib as L  # noqa: E402
@@ -124,7 +125,7 @@ def main():
             if o.get('backText') or any(e.get('kind') == 'lights-down' for e in o.get('effects') or []):   # both draw the person's cutout
                 subprocess.run([matte, os.path.join(HERE, 'matte_reel.py'), rid], check=True, capture_output=True)
             pic = os.path.join(ROOT, 'out', 'drafts', rid + '-picture.mp4')
-            p = subprocess.run(['npx', 'remotion', 'render', 'src/methodology/index.ts', rid, pic, '--frames=%d-%d' % (f0, f1),
+            p = subprocess.run(REMOTION + ['render', 'src/methodology/index.ts', rid, pic, '--frames=%d-%d' % (f0, f1),
                                 '--scale=0.5', '--muted', '--crf=28', '--public-dir=public', '--log=error'], cwd=ROOT, capture_output=True, text=True)
             if p.returncode != 0:
                 sys.exit('beat_options: render failed for "%s": %s' % (o['label'], (p.stderr or p.stdout)[-400:]))

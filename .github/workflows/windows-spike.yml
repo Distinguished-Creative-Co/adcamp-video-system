@@ -2,10 +2,7 @@
 # Windows itself. Ten yes/no answers before any porting. Throwaway: it changes no AVS file and ships nothing.
 name: windows-spike
 on:
-  workflow_dispatch:
-  push:
-    branches: [windows-preview]
-    paths: ['.github/**']
+  workflow_dispatch:   # Phase 0 is done (2026-11-10, all ten yes): it runs only when asked
 permissions:
   contents: read
 jobs:

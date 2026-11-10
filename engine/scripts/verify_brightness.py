@@ -12,19 +12,22 @@ Exit 0 on PASS, 1 on FAIL or when no frames could be read.
 import argparse
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
 
 
 def luma_per_frame(mp4):
-    fd, tmp = tempfile.mkstemp(prefix='luma-', suffix='.txt')
-    os.close(fd)
+    # the metadata file is named relative to the folder ffmpeg runs in: a full Windows path's drive colon and
+    # backslashes break filter syntax
+    d = tempfile.mkdtemp(prefix='luma-')
+    tmp = os.path.join(d, 'luma.txt')
     try:
-        subprocess.run(['ffmpeg', '-v', 'error', '-nostdin', '-i', mp4,
-                        '-vf', 'scale=128:72,signalstats,metadata=mode=print:file=%s' % tmp,
+        subprocess.run(['ffmpeg', '-v', 'error', '-nostdin', '-i', os.path.abspath(mp4),
+                        '-vf', 'scale=128:72,signalstats,metadata=mode=print:file=luma.txt',
                         '-an', '-f', 'null', '-'],
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True, cwd=d)
         rows, frame = [], None
         with open(tmp) as f:
             for line in f:
@@ -38,7 +41,7 @@ def luma_per_frame(mp4):
                     frame = None
         return rows
     finally:
-        os.remove(tmp)
+        shutil.rmtree(d, ignore_errors=True)
 
 
 def main():

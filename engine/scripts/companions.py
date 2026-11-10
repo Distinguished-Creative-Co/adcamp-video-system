@@ -14,6 +14,7 @@ import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REMOTION = ['node', os.path.join(ROOT, 'node_modules', '@remotion', 'cli', 'remotion-cli.js')]   # never npx: on Windows npx is a .cmd file, which Python cannot start by bare name
 FORMATS = ['cover-vertical', 'cover-feed', 'static-square', 'static-feed', 'static-vertical']
 
 
@@ -32,11 +33,11 @@ def main():
     out = os.path.join(ROOT, 'out', '%s-companions' % (sys.argv[2] if len(sys.argv) > 2 else name))   # a version's own folder (name-v2)
     os.makedirs(out, exist_ok=True)
     bundle = os.path.join(ROOT, '.qa-bundle')
-    subprocess.run(['npx', 'remotion', 'bundle', 'src/methodology/index.ts', '--out-dir', bundle, '--log=error'], cwd=ROOT, check=True)
+    subprocess.run(REMOTION + ['bundle', 'src/methodology/index.ts', '--out-dir', bundle, '--log=error'], cwd=ROOT, check=True)
     paths = []
     for fmt in FORMATS + (['thumbnail'] if rc.get('thumbnail') else []):
         p = os.path.join(out, '%s.png' % fmt)
-        subprocess.run(['npx', 'remotion', 'still', bundle, '%s--%s' % (name, fmt), p, '--log=error'], cwd=ROOT, check=True, capture_output=True)
+        subprocess.run(REMOTION + ['still', bundle, '%s--%s' % (name, fmt), p, '--log=error'], cwd=ROOT, check=True, capture_output=True)
         paths.append(p)
     ins, fg = [], ''
     for i, p in enumerate(paths):
