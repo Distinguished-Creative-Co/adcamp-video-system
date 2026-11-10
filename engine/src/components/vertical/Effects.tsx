@@ -4,6 +4,7 @@ import { Ban, Calendar, Clock, DollarSign, Globe, MapPin, Megaphone, MessageCirc
 import { CREME_DARK, GOLD, glow, ACCENT_ON_FOOTAGE, moneyColor } from '../vc/style';
 import { SANS, accentFace } from '../vc/fonts';
 import { easeOutCubic } from '../../methodology/layout';
+import { AD_GIANT_CAPS, giantNumberLayout } from '../../methodology/adsafe';
 import type { CaptionLook, Effect, Word } from '../../methodology/ReelConfig';
 import { ArrowNote, CommentBox, CoverStory, ListTracker, NoteWall, QuoteCard } from './EffectsMore';
 
@@ -24,7 +25,8 @@ import { ArrowNote, CommentBox, CoverStory, ListTracker, NoteWall, QuoteCard } f
  *   pie            a share drawn as a pie, with its label
  *   giant-number   a list number slammed in huge, in front of everything: the one effect that covers the face, briefly
  *   transition     at a picture join: a camera move (whip, zoom, spin), a warm flash, or a shape (iris, bars)
- * Numbers and words on screen pass the same spoken-words guard as every other text.
+ * Numbers and words on screen pass the same spoken-words guard as every other text. In a paid ad the top band is drawn
+ * lower and smaller by VerticalReel, and giant captions and the giant number sit inside Meta's ad safe zone (adsafe.ts).
  */
 const BAND = { x: 160, y: 130, w: 760, h: 520 } as const;
 const ICONS = { megaphone: Megaphone, ban: Ban, calendar: Calendar, clock: Clock, dollar: DollarSign, globe: Globe, pin: MapPin,
@@ -62,7 +64,7 @@ const WordStamp: React.FC<{ fx: Extract<Effect, { kind: 'word-stamp' }>; lf: num
 };
 
 /** the word being spoken now, huge; key words in the accent serif */
-export const GiantCaptions: React.FC<{ words: Word[]; now: number; lf: number; len: number; look?: CaptionLook }> = ({ words, now, lf, len, look }) => {
+export const GiantCaptions: React.FC<{ words: Word[]; now: number; lf: number; len: number; look?: CaptionLook; paid?: boolean }> = ({ words, now, lf, len, look, paid = false }) => {
   const live = words.filter((w) => w.t && w.s <= now + 0.04);
   const w = live[live.length - 1];
   if (!w) return null;
@@ -70,9 +72,9 @@ export const GiantCaptions: React.FC<{ words: Word[]; now: number; lf: number; l
   const face = accentFace();
   const accent = !!(w.key ?? w.big);
   const text = w.t.replace(/[.,!?]+$/, '');
-  const size = Math.min(accent ? 260 : 210, 820 / ((accent ? face.width : 0.62) * Math.max(text.length, 3)));
+  const size = Math.min(paid ? 220 : accent ? 260 : 210, 820 / ((accent ? face.width : 0.62) * Math.max(text.length, 3)));
   return (
-    <div style={{ position: 'absolute', left: 120, width: 840, top: 1080, height: 420, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    <div style={{ position: 'absolute', left: 120, width: 840, top: paid ? AD_GIANT_CAPS.top : 1080, height: paid ? AD_GIANT_CAPS.h : 420, display: 'flex', alignItems: 'center', justifyContent: 'center',
       opacity: clamp01((len - lf) / 6) }}>
       <span style={{ fontFamily: accent ? face.family : SANS, fontStyle: accent ? 'italic' : 'normal', fontWeight: accent ? face.weight : 900,
         fontSize: size, lineHeight: 1, color: moneyColor(text, look) ?? (accent ? ACCENT_ON_FOOTAGE : '#fff'), textTransform: accent ? 'none' : 'uppercase',
@@ -250,7 +252,7 @@ const Counter: React.FC<{ fx: Extract<Effect, { kind: 'counter' }>; lf: number; 
 /** A list number ("1", "2") slammed in huge over everything for 12-45 frames. It covers the host on purpose, so it
  *  stays brief: overshoots in over 5 frames, settles with a small shake while a ring bursts out behind it and the
  *  footage dims, then punches out over the last 4. Brand sans, brand accent, inside the safe area. */
-export const GiantNumber: React.FC<{ fx: Extract<Effect, { kind: 'giant-number' }>; lf: number; len: number }> = ({ fx, lf, len }) => {
+export const GiantNumber: React.FC<{ fx: Extract<Effect, { kind: 'giant-number' }>; lf: number; len: number; paid?: boolean }> = ({ fx, lf, len, paid = false }) => {
   const IN = 5;
   const backOut = (p: number) => { const c1 = 2.2, c3 = c1 + 1; return 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2); };
   const pop = lf < IN ? 0.25 + 0.75 * backOut(clamp01(lf / IN))
@@ -258,8 +260,9 @@ export const GiantNumber: React.FC<{ fx: Extract<Effect, { kind: 'giant-number' 
   const outP = easeOutCubic(clamp01((lf - (len - 4)) / 4));
   const op = Math.min(1, (lf + 1) / 2) * (1 - outP);   // half there on its first frame, so the hand-off from the caption is never empty
   const ring = easeOutCubic(clamp01(lf / 10));
-  const size = Math.min(1700, 900 / (0.56 * Math.max(fx.value.length, 1)));   // a single digit stands about 60% of the frame tall
-  const cx = 520, cy = 860;   // a little left of center: clear of the right-edge buttons and the bottom 320px
+  // a single digit stands about 60% of the frame tall, a little left of center: clear of the right-edge buttons and the bottom 320px
+  // (a paid ad: smaller and higher, inside Meta's ad safe zone)
+  const { size, cx, cy } = giantNumberLayout(fx.value, paid);
   return (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(8,8,10,0.32)', opacity: op }} />
@@ -298,12 +301,12 @@ const Pie: React.FC<{ fx: Extract<Effect, { kind: 'pie' }>; lf: number; len: num
 };
 
 /** One top-band or over-footage effect at this frame (transitions are handled in TransitionLayer). */
-export const EffectLayer: React.FC<{ fx: Effect; frame: number; words: Word[]; now: number; look?: CaptionLook }> = ({ fx, frame, words, now, look }) => {
+export const EffectLayer: React.FC<{ fx: Effect; frame: number; words: Word[]; now: number; look?: CaptionLook; paid?: boolean }> = ({ fx, frame, words, now, look, paid = false }) => {
   if (fx.kind === 'transition') return null;
   const lf = frame - fx.in, len = fx.out - fx.in;
   switch (fx.kind) {
     case 'word-stamp': return <WordStamp fx={fx} lf={lf} len={len} />;
-    case 'giant-captions': return <GiantCaptions words={words} now={now} lf={lf} len={len} look={look} />;
+    case 'giant-captions': return <GiantCaptions words={words} now={now} lf={lf} len={len} look={look} paid={paid} />;
     case 'icon-strike': return <IconStrike fx={fx} lf={lf} len={len} />;
     case 'page-scroll': return <PageScroll fx={fx} lf={lf} len={len} />;
     case 'live-markup': return <LiveMarkup fx={fx} lf={lf} len={len} />;
@@ -316,8 +319,8 @@ export const EffectLayer: React.FC<{ fx: Effect; frame: number; words: Word[]; n
     case 'list-tracker': return <ListTracker fx={fx} lf={lf} len={len} />;
     case 'quote-card': return <QuoteCard fx={fx} lf={lf} len={len} />;
     case 'cover-story': return <CoverStory fx={fx} lf={lf} len={len} />;
-    case 'note-wall': return <NoteWall fx={fx} lf={lf} len={len} />;
-    case 'arrow-note': return <ArrowNote fx={fx} lf={lf} len={len} />;
+    case 'note-wall': return <NoteWall fx={fx} lf={lf} len={len} paid={paid} />;
+    case 'arrow-note': return <ArrowNote fx={fx} lf={lf} len={len} paid={paid} />;
     case 'comment-box': return <CommentBox fx={fx} lf={lf} len={len} />;
     default: return null;
   }

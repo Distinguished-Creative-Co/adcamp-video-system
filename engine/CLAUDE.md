@@ -26,6 +26,9 @@ The skill `avs` sequences the work; these are the rules it relies on.
 4. The person is always on screen. Nothing essential in the bottom 320px or right 120px
    (Instagram and TikTok buttons). One exception: `giant-number` covers the frame, face included, on purpose,
    for 12-45 frames on a list number they said. The engine caps it and keeps everything else off it.
+   Lights Down (`lights-down`) dims the room behind them for one line: depth 0.35 to 0.7 (default 0.6), 30 to 150 frames,
+   not in the first 45 frames, inside one take, not over words behind, a glass word, a card or a giant number, at most
+   two, full-frame scenes only (and not while the picture glides back from a card). The engine enforces it.
 5. On-screen words are the person's own. Write them from what they said, and never make up results,
    reviews or prices for them. Nothing is checked or blocked: they read it all on the storyboard.
 6. Music and sound effects come only from AVS's own sounds, files the person supplied, or music they picked by
@@ -41,7 +44,8 @@ The skill `avs` sequences the work; these are the rules it relies on.
    - `--face`: the face center in 1080x1920 pixels, from a gridded still.
    - `--unmirror`: front-camera footage saved mirrored (text in the shot reads backwards).
    - `--outdoor`: street or noisy audio, or the cut fails with "no silence" at a take edge.
-   - `--paid`: a Meta ad ("Click Learn More", ad copy draft) instead of an organic post.
+   - `--paid`: a Meta ad ("Click Learn More", ad copy draft) instead of an organic post. Every word in a paid ad
+     stays inside Meta's ad safe zone (x 60-1020, y 250-1250) on its own: never move captions or drop effects for it.
 2. Read `script/<name>-takes.md`: every stretch of audio is KEPT or DROPPED with a reason.
 3. Fill every TODO in the config (cover title, panel copy), then re-run until the scene map says
    READY and you have LOOKED at `qa/<name>/preview/sheet.png`.
@@ -53,7 +57,7 @@ The skill `avs` sequences the work; these are the rules it relies on.
   or keep a specific take: `make_reel.sh <video> <name> --keep-take N --preview` (numbers in `script/<name>-takes.md`).
 - `last_take` "no silence" at a take edge: re-run with `--outdoor`.
 - A mistake inside a kept take ("at 0:24 I fumbled") or a different take after the config was filled: back up the
-  config, `make_reel.sh <video> <name> --trim A-B --regen --preview` (or `--keep-take N`), then
+  config, `make_reel.sh <video> <name> --trim A-B --regen --preview` (one `--trim` per fumble, several in one run, or `--keep-take N`), then
   `scripts/retime_reel.py <name> --from <backup>`, then `--preview` again (the skill has the full steps).
 - Face framed wrong: set `"faceX"` / `"faceY"` in the config to the corrected anchor and preview again. Never
   `--regen` a filled config (it discards every choice).

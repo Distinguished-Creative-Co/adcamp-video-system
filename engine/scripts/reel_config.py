@@ -144,15 +144,18 @@ def timeline_errors(cfg):
     shown += [b.get('label') or '' for b in cfg.get('inserts') or [] if b.get('kind') == 'clip']
     for e in cfg.get('effects') or []:   # every word an effect puts on screen
         shown += [str(e.get(k) or '').replace('==', '') for k in ('word', 'label', 'keys', 'text', 'value', 'title', 'url', 'headline', 'sub', 'callout', 'who', 'strap', 'keyword', 'lead')]
-        shown += [str(x) for x in e.get('lines') or []] + [n.get('t', '') for n in e.get('notes') or []]
-        shown += [it.get('t', '') for it in e.get('items') or []]
+        # lines: a receipt's are objects ({"t", "value", "at"}), a cover story's are plain strings: read either, and
+        # never a frame number ("at") as words on screen
+        txt = lambda x: x if isinstance(x, str) else '%s %s' % (x.get('t', ''), x.get('value') or '') if isinstance(x, dict) else str(x)  # noqa: E731
+        shown += [txt(x) for x in e.get('lines') or []] + [txt(n) for n in e.get('notes') or []]
+        shown += [txt(it) for it in e.get('items') or []]
         if e.get('kind') == 'pie' and not e.get('value'):
             shown.append('%s%%' % e.get('pct'))
-        shown += ['%s %s' % (l.get('t', ''), l.get('value') or '') for l in e.get('lines') or []]
     said = set(re.sub(r"[^a-z0-9']", '', w['t'].lower().replace('\u2019', "'")) for w in words)
     # member installs (AVS_HOME set) have no claims guard: what they put on screen is theirs to say (Chris, 2026-10-25)
     guard = not os.environ.get('AVS_HOME')
-    for b in ((cfg.get('backText') or []) + ([{'text': th['back']}] if th.get('back') else [])) if guard else []:
+    cvb = (cfg.get('cover') or {}).get('back')   # a cover's words behind the host are spoken words, like back text
+    for b in ((cfg.get('backText') or []) + ([{'text': th['back']}] if th.get('back') else []) + ([{'text': cvb}] if cvb else [])) if guard else []:
         for t in b['text'].split():
             if re.sub(r"[^a-z0-9']", '', t.lower().replace('\u2019', "'")) not in said:
                 errs.append('back text "%s": "%s" is never spoken in the reel' % (b['text'], t))
@@ -165,6 +168,14 @@ def timeline_errors(cfg):
         for n in re.findall(r'\d+', txt):
             if n not in spoken:
                 errs.append('number "%s" on screen ("%s") is never spoken in the reel' % (n, txt[:60]))
+    # lights-down stays inside one take: the picture joins live in the cut's sidecar, which validateReel only sees at render
+    side = os.path.join(ROOT, 'public', os.path.splitext(cfg['src'])[0] + '.json')
+    joins = [int(round(t * FPS)) for t in json.load(open(side)).get('videoJoins', [])] if os.path.exists(side) else []
+    for i, e in enumerate(cfg.get('effects') or []):
+        if e.get('kind') == 'lights-down':
+            j = next((f for f in joins if e['in'] < f < e['out']), None)
+            if j is not None:
+                errs.append('lights-down %d-%df runs across the picture join at frame %d: keep it inside one take' % (e['in'], e['out'], j))
     for i, sw in enumerate(cfg['swaps']):
         for key in ('in', 'out'):
             if key == 'out' and sw['out'] >= cfg['frames']:
@@ -190,4 +201,7 @@ def main():
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

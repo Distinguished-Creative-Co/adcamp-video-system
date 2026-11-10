@@ -34,7 +34,8 @@ def probe(path):
     w, h = v.get('width', 0), v.get('height', 0)
     rot = 0
     for sd in v.get('side_data_list') or []:
-        rot = int(sd.get('rotation', 0) or 0)
+        if 'rotation' in sd:   # iPhones add entries without one (ambient light) after the display matrix
+            rot = int(float(sd['rotation']))
     rot = int((v.get('tags') or {}).get('rotate', rot) or 0)
     if abs(rot) % 180 == 90:
         w, h = h, w
@@ -133,4 +134,7 @@ def main():
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

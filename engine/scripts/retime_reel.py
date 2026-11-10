@@ -139,7 +139,13 @@ def main():
     open(p, 'w').write(src)
     print('retimed %s: %d -> %d frames; scenes %s; swaps %s' % (
         name, old['frames'], frames_new, [s['from'] for s in cfg['scenes']], [(s['in'], s['out']) for s in cfg['swaps']]))
+    import cover_options   # the three covers move with the cut and are redrawn, or are left out when they can't be
+    if os.path.exists(cover_options.record_path(name)):
+        cover_options.carry(name, remap=remap)
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

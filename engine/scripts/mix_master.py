@@ -12,7 +12,8 @@ unassigned and skipped. Cues are derived from the config, one per real event:
   element_land       every panel element as it settles (stat, CTA, checklist item, funnel stage, option)
   state_change       a decision's pick
 
-Effects start about 8 dB under the dialogue mean (cluster-compensated). The mix is mastered
+Effects start about 8 dB under the dialogue mean (cluster-compensated), plus any per-role dB in
+sounds.json "levels" ({"transition_whoosh": -6} plays the whooshes 6 dB quieter). The mix is mastered
 with two-pass loudnorm to -14 LUFS, true peak -1.5 dBTP, then verified: the file is refused
 if its true peak is above -1 dBTP. Writes qa/<name>/sound-cues.json and loudness.json.
 """
@@ -175,6 +176,7 @@ def main():
     duration = cfg['frames'] / float(FPS)
     roles = json.load(open(os.path.join(ROOT, 'sounds.json')))
     target = mean_db(voice) - 8
+    levels = roles.get('levels') or {}   # optional dB per role on top of the -8 dB target, e.g. {"transition_whoosh": -6}
     inputs = ['ffmpeg', '-y', '-v', 'error', '-i', voice]
     filters = ['[0:a]aresample=48000,aformat=channel_layouts=stereo[v]']
     labels = ['[v]']
@@ -199,7 +201,7 @@ def main():
         i = len(labels)
         inputs += ['-i', clip]
         same = sum(1 for x in cues if x['role'] == c['role'] and abs(x['frame'] - c['frame']) <= 3)
-        gain = 10 ** ((target - 10 * math.log10(max(same, 1)) - means[clip]) / 20)
+        gain = 10 ** ((target - 10 * math.log10(max(same, 1)) - means[clip] + float(levels.get(c['role'], 0))) / 20)
         start = max(0.0, at - float(peaks.get(path, 0.0)))
         filters.append('[%d:a]aresample=48000,aformat=channel_layouts=stereo,volume=%.8f,adelay=%dS:all=1[s%d]'
                        % (i, gain, round(start * 48000), i))
@@ -262,4 +264,7 @@ def main():
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

@@ -77,6 +77,10 @@ def from_picks(name, dflt):
     if not os.path.exists(p):
         sys.exit('my_styles: no picks saved yet. Open the Picker: python3 scripts/picker.py')
     pk = json.load(open(p))
+    if pk.get('mode') != 'style' and pk.get('effects') and all(k in L.RETIRED_EFFECTS for k in pk['effects']):
+        # nothing changed yet: a mix of only retired effects would save as a captions-only look they never chose
+        sys.exit('my_styles: not saved: every effect picked (%s) was retired, so nothing is left to save but captions. '
+                 'Ask them to pick again in the Picker.' % ', '.join(L.RETIRED_EFFECTS[k] for k in pk['effects']))
     if pk.get('fonts'):   # a font pick is theirs everywhere: captions, cards, carousels
         bp = os.path.join(L.ROOT, 'src', 'brand.json')
         brand = json.load(open(bp))
@@ -105,6 +109,16 @@ def from_picks(name, dflt):
         st = {'name': name, 'slug': slug, 'created': datetime.date.today().isoformat(), 'sources': []}
         open(os.path.join(L.style_dir(slug), 'style.md'), 'w').write(MD.format(name=name, date=st['created']).replace(
             '- (each example: the link or file, and what was taken from it)', '- Picked in the Picker on %s.' % st['created']))
+    # only effects the pages still offer: a picks file written by hand can name a retired one (Word Stamp, Cover Story)
+    try:
+        offered = {e['key'] for e in json.load(open(os.path.join(L.ROOT, 'picker', 'catalog.json')))['effects']}
+    except (OSError, ValueError, KeyError):
+        offered = None
+    retired = [k for k in pk.get('effects') or [] if offered is not None and k not in offered and k != 'card']
+    if retired:
+        pk = dict(pk, effects=[k for k in pk['effects'] if k not in retired],
+                  parts={k: v for k, v in (pk.get('parts') or {}).items() if k not in retired} or None)
+        print('my_styles: left out %s: retired, no longer offered for new videos' % ', '.join(L.RETIRED_EFFECTS.get(k) or k.replace('-', ' ').title() for k in retired))
     # full screen with words behind them, so any picked effect has room (studio's windows would hide most of them)
     st.update({'base': 'hype', 'captionStyle': pk['captionStyle'], 'zooms': 'none',
                'effects_allowed': pk.get('effects') or [], 'effect_parts': pk.get('parts'),
@@ -124,7 +138,7 @@ def from_picks(name, dflt):
         txt = open(md).read()
         txt = txt.replace('## Captions\n', '## Captions\n- %s, picked in the Picker.\n' % nm('captions', st['captionStyle']), 1)
         txt = txt.replace('## Graphic elements\n', '## Graphic elements\n- %s\n' % (', '.join(fx) or 'None picked.'), 1)
-        open(md, 'w').write(txt)
+        open(md, 'w').write(L.scrub_retired_md(txt)[0])
     st['updated'] = datetime.date.today().isoformat()
     errs = L.check(st)
     if errs:
@@ -221,6 +235,16 @@ def main():
         if like:   # everything the look decides, none of what makes it a shipped starter
             st.update({k: v for k, v in like.items() if k not in ('name', 'slug', 'builtin', 'starter', 'order', 'hidden', 'aliases', 'created', 'sources')})
             st['started_from'] = like['name']
+            try:   # only effects the pages still offer (a look of theirs can name a retired one)
+                offered = {e['key'] for e in json.load(open(os.path.join(L.ROOT, 'picker', 'catalog.json')))['effects']}
+            except (OSError, ValueError, KeyError):
+                offered = None
+            retired = [k for k in st.get('effects_allowed') or [] if offered is not None and k not in offered and k != 'card']
+            if retired:
+                st['effects_allowed'] = [k for k in st['effects_allowed'] if k not in retired]
+                if isinstance(st.get('effect_parts'), dict):
+                    st['effect_parts'] = {k: v for k, v in st['effect_parts'].items() if k not in retired} or None
+                print('my_styles: left out %s: retired, no longer offered for new videos' % ', '.join(L.RETIRED_EFFECTS.get(k) or k.replace('-', ' ').title() for k in retired))
         write(st)
         md = MD.format(name=name, date=st['created'])
         if like:   # start their notes from the starter's own plain-words description
@@ -228,6 +252,9 @@ def main():
             body = open(src).read().split('\n', 1)[1] if os.path.exists(src) else ''
             md = '# %s\n\nMade: %s, started from the %s starter look. Edit this file in plain words. style.json is what the build reads.\n%s' % (
                 name, st['created'], like['name'], body)
+        md, gone = L.scrub_retired_md(md)   # their notes match style.json: no retired effect listed
+        if gone and not retired:
+            print('my_styles: ' + L.retired_note(gone))
         open(os.path.join(L.style_dir(slug), 'style.md'), 'w').write(md)
         print('my_styles: made "%s" in %s (style.json, style.md, sources/)' % (name, os.path.relpath(L.style_dir(slug), L.ROOT)))
         return
@@ -274,6 +301,12 @@ def main():
         st['saved_from'] = cfg['id']
         st['updated'] = datetime.date.today().isoformat()
         write(st)
+        md = os.path.join(L.style_dir(st['slug']), 'style.md')
+        if os.path.exists(md):   # an older style's notes can still list a retired effect
+            txt, gone = L.scrub_retired_md(open(md).read())
+            if gone:
+                open(md, 'w').write(txt)
+                print('my_styles: ' + L.retired_note(gone) + ' (taken out of its notes too)')
         if not dflt:
             json.dump({'default': st['slug']}, open(L.defaults_path(), 'w'))
         print('my_styles: saved %s into "%s"%s' % (', '.join(took), st['name'], ' (now the default)' if not dflt else ''))
@@ -296,4 +329,7 @@ def main():
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

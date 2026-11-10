@@ -4,7 +4,7 @@
     python3 scripts/last_take.py inputs/<name>.mp4 --words script/word-timings/<name>-wx.json \
         --script script/<name>.txt --out public/host/<name>-cut.mp4 \
         --report script/<name>-takes.md --json script/word-timings/<name>-takes.json \
-        [--noise-db N --strict-db N] [--drop-take N,..] [--keep-take N,..] [--allow-missing] [--plan-only]
+        [--noise-db N --strict-db N] [--drop-take N,..] [--keep-take N,..] [--trim A-B ...] [--allow-missing] [--plan-only]
 
 Why this exists: a creator re-reads lines without saying "reset, reset". A plain
 silence cutter only removes marked flubs and dead air, so every retake would
@@ -46,6 +46,7 @@ FLOOR_LONG = 0.22    # ...or this, for dead air >= 2s
 COMPLETE = 0.80      # script-token coverage for a take to count as complete
 PARTIAL = 0.35       # below this a match is noise, not a take
 NEAR_BEST = 0.10     # a later take within this much coverage of the best one still wins
+MIN_PIECE = 0.40     # a keep segment shorter than this with no word in it is a breath inside a pause: dropped
 
 NUMWORDS = {'zero': '0', 'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5', 'six': '6',
             'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10', 'eleven': '11', 'twelve': '12',
@@ -344,25 +345,31 @@ def apply_trims(keep, trims):
     return out
 
 
-def trim(a):
-    """Cut a raw range out of the current cut (e.g. Chris: "at 24s there is a fumble"). Saved to
-    <name>-trims.json so every later re-run keeps it."""
-    ta, tb = [float(x) for x in a.trim.split('-')]
-    rec = json.load(open(a.json))
-    S = [tuple(x) for x in rec['silences']]
-    keep = apply_trims([tuple(k) for k in rec['keep']], [(ta, tb)])
-    forbidden = [tuple(f) for f in rec['forbidden']]
-    hostcut.assert_cuts_in_silence(keep, S, rec['duration'], min_join_silence=MIN_JOIN, forbidden_spans=forbidden)
-    keep = render(a, rec, keep, S, rec['duration'], forbidden)
-    tp = trims_path(a)
-    trims = json.load(open(tp)) if os.path.exists(tp) else []
-    trims.append({'raw': [ta, tb], 'why': 'manual trim (fumble kept by the selector)'})
-    json.dump(trims, open(tp, 'w'), indent=1)
-    rec.setdefault('trims', []).append([ta, tb])
-    json.dump(rec, open(a.json, 'w'), indent=1)
-    with open(a.report, 'a') as f:
-        f.write('\n## Manual trim (HARD RULE re-checked: PASS)\n\n- removed raw %.2f-%.2f\n' % (ta, tb))
-    print('trim: removed raw %.2f-%.2f, cut now %.1fs -> %s (saved to %s)' % (ta, tb, rec['cut_duration'], a.out, os.path.basename(tp)))
+def parse_trims(specs):
+    """--trim A-B, given once per fumble (e.g. Chris: "at 24s there is a fumble") -> [(a, b)] raw seconds."""
+    out = []
+    for t in specs:
+        m = re.match(r'^\s*(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*$', t)
+        if not m or float(m.group(1)) >= float(m.group(2)):
+            sys.exit('last_take: --trim takes raw seconds A-B with A before B (got "%s")' % t)
+        out.append((float(m.group(1)), float(m.group(2))))
+    return out
+
+
+def drop_slivers(keep, words):
+    """Drop keep segments under MIN_PIECE that hold no word: the breaths and rustles left between two tightened
+    silences of one pause, or beside a trim. Each one is its own picture segment, so the shot jumps several times in
+    half a second and a look with a transition on every join stacks them frames apart. Both neighbors already end and
+    start inside a silence, so the pause becomes one join (the HARD RULE gate re-checks it). A word's midpoint decides,
+    since fast-whisper edges run loose. Returns (keep, dropped)."""
+    mids = [(w['start'] + w['end']) / 2 for w in words]
+    out, dropped = [], []
+    for s0, e0 in keep:
+        if e0 - s0 < MIN_PIECE and not any(s0 <= m <= e0 for m in mids):
+            dropped.append((s0, e0))
+        else:
+            out.append((s0, e0))
+    return out, dropped
 
 
 def main():
@@ -385,12 +392,13 @@ def main():
     ap.add_argument('--plan-only', action='store_true')
     ap.add_argument('--no-jcut', action='store_true', help='picture and sound cut at the same moment (no J-cuts)')
     ap.add_argument('--refine', default=None, help='cut-wx.json of the current cut: tighten loose joins, re-cut')
-    ap.add_argument('--trim', default=None, help='RAW_A-RAW_B seconds of the raw take to remove (a fumble the selector kept); saved to <name>-trims.json')
+    ap.add_argument('--trim', action='append', default=[], metavar='A-B',
+                    help='RAW_A-RAW_B seconds of the raw take to remove (a fumble the selector kept); repeat for several. '
+                         'Saved to <name>-trims.json once the cut passes the HARD RULE gate; every cut applies that whole list')
     a = ap.parse_args()
     if a.refine:
         return refine(a)
-    if a.trim:
-        return trim(a)
+    new_trims = parse_trims(a.trim)
 
     words = json.load(open(a.words))
     words = [w for w in words if w.get('word', '').strip()]
@@ -605,9 +613,19 @@ def main():
         segs.append((cur, ce))
         keep += segs
 
+    # trims: the saved list (<name>-trims.json, from --trim or added by hand) plus this run's --trim, applied the same
+    # way on every cut. A new one is saved only once the cut passes the HARD RULE gate below.
     tp = trims_path(a)
-    if os.path.exists(tp):
-        keep = apply_trims(keep, [tuple(t['raw']) for t in json.load(open(tp))])
+    saved_trims = json.load(open(tp)) if os.path.exists(tp) else []
+    trims = [tuple(t['raw']) for t in saved_trims]
+    added = []
+    for t in new_trims:
+        if all(abs(t[0] - x0) > 0.0005 or abs(t[1] - x1) > 0.0005 for x0, x1 in trims):
+            trims.append(t)
+            added.append(t)
+    if trims:
+        keep = apply_trims(keep, trims)
+    keep, slivers = drop_slivers(keep, words)
     forbidden = []
     for r in hostcut.detect_reset_spans(words, S):
         forbidden.append(r['forbid'])
@@ -636,6 +654,12 @@ def main():
         except Exception as ex:  # noqa: BLE001  (reported, then exit non-zero)
             gate = 'FAIL: %s' % ex
             errors.append(gate)
+    if added and gate == 'PASS' and not a.plan_only:
+        json.dump(saved_trims + [{'raw': [ta, tb], 'why': 'manual trim (fumble kept by the selector)'} for ta, tb in added],
+                  open(tp, 'w'), indent=1)
+    elif added and gate != 'PASS':
+        errors.append('not saved: --trim %s (the cut did not pass the HARD RULE gate; each trim edge must sit in a pause)'
+                      % ', '.join('%.2f-%.2f' % t for t in added))
 
     # raw -> cut time (QA only; the whisperX align of the cut is the timing truth)
     def to_cut(t):
@@ -655,7 +679,7 @@ def main():
            'units': [{'id': u['id'], 'para': u['para'], 'text': u['text']} for u in units],
            'candidates': cands, 'chosen': {str(k): v['n'] for k, v in chosen.items()},
            'missing': missing, 'keep': keep, 'forbidden': forbidden, 'gate': gate, 'errors': errors,
-           'cut_duration': cut_len,
+           'trims': [list(t) for t in trims], 'slivers': [list(x) for x in slivers], 'cut_duration': cut_len,
            'labels': [{'i': i, 'word': w['word'], 'start': w['start'], 'end': w['end'],
                        'label': label[i][0], 'why': label[i][1], 'cut_t': to_cut(w['start'])}
                       for i, w in enumerate(words)]}
@@ -689,6 +713,12 @@ def main():
         i = j + 1
     L += ['', '## Keep segments (raw seconds)', '']
     L += ['- %.3f to %.3f (%.2fs)' % (s, e, e - s) for s, e in keep]
+    if trims:
+        L += ['', '## Trims (raw seconds, from %s and --trim)' % os.path.basename(tp), '']
+        L += ['- removed %.2f-%.2f%s' % (t[0], t[1], ' (new this run)' if t in added else '') for t in trims]
+    if slivers:
+        L += ['', '## Breaths dropped from inside pauses (under %.1fs, no word: one join instead of a picture flicker)' % MIN_PIECE, '']
+        L += ['- %.3f to %.3f (%.2fs)' % (s, e, e - s) for s, e in slivers]
     L += ['', 'Override a pick with `--drop-take N` or `--keep-take N` (take numbers from the candidates in the JSON twin). '
               'Picks are saved in %s and kept on every later re-cut.' % os.path.basename(picks_path(a))]
     if errors:
@@ -697,6 +727,10 @@ def main():
         L += ['', '## MISSING', ''] + ['- S%d has no complete take: %s' % (m + 1, units[m]['text']) for m in missing]
     open(a.report, 'w').write('\n'.join(L) + '\n')
     print('\n'.join(L[:5]))
+    if trims:
+        print('trims: %d applied (%d new%s)' % (len(trims), len(added), ', saved to ' + os.path.basename(tp) if added and gate == 'PASS' and not a.plan_only else ''))
+    if slivers:
+        print('breaths: %d piece(s) under %.1fs with no word dropped from inside pauses' % (len(slivers), MIN_PIECE))
 
     if errors or (missing and not a.allow_missing):
         sys.exit('last_take: stopped (see %s)' % a.report)
@@ -709,4 +743,7 @@ def main():
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

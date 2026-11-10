@@ -6,11 +6,13 @@ has read it and approved (scripts/approve_reel.py).
 
 Every row says what is SAID, what is SHOWN, and what MOVES. It also accounts for all the
 audio the take step removed, flags repeated phrases left in the cut, runs both validators,
-refuses to call a config ready while any TODO copy remains, and writes a face-check still.
+refuses to call a config ready while any TODO copy remains or its frames no longer match
+its cut, and writes a face-check still.
 Python 3.9 compatible.
 """
 import hashlib
 import json
+import math
 import os
 import subprocess
 import sys
@@ -53,6 +55,27 @@ def face_check(cfg, name):
     return os.path.relpath(out, ROOT)
 
 
+def cut_frames(cfg):
+    """How many frames the cut runs, counted the way gen_reel_config.py sets a new config's frames."""
+    pr = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0',
+                         os.path.join(ROOT, 'public', cfg['src'])], capture_output=True, text=True, check=True).stdout
+    return int(math.ceil(float(pr) * FPS))
+
+
+def cut_length_error(name, frames, cut_f):
+    """None when a config's frames match its cut (one frame over is rounding). A re-cut keeps an existing config as it
+    was, so a reel can outrun its new cut (the last picture freezes on screen) or stop before it ends (words dropped)."""
+    if cut_f <= frames <= cut_f + 1:
+        return None
+    d = frames - cut_f
+    n = '%d frame%s (%.2fs)' % (abs(d), '' if abs(d) == 1 else 's', abs(d) / FPS)
+    what = ('the reel would hold the last picture still for %s' % n if d > 0 else
+            'the reel would stop %s before the cut ends and drop what is said there' % n)
+    return ('"frames" is %d but the cut runs %d frames (%.2fs): %s. Set "frames": %d, or when scenes, cards or effects '
+            'must move with the new cut, back up the config, re-cut with --regen, then '
+            '`scripts/retime_reel.py %s --from <backup>`' % (frames, cut_f, cut_f / FPS, what, cut_f, name))
+
+
 def main():
     if len(sys.argv) != 2:
         sys.exit('usage: scene_map.py <name>')
@@ -72,7 +95,7 @@ def main():
     seams_lines = [ln.strip() for ln in sp.stdout.splitlines() if ln.strip()]
     roles = json.load(open(os.path.join(ROOT, 'sounds.json')))
     roles = {k: v for k, v in roles.items() if not k.startswith('_')}
-    role_names = {k: v for k, v in roles.items() if k != 'music_beds'}
+    role_names = {k: v for k, v in roles.items() if k not in ('music_beds', 'levels')}
     law = reel_config.timeline_errors(cfg)
     todo = [ln.strip() for ln in open(cfg_path) if 'TODO' in ln.split('//')[0]]
     toks = [(verify_clean_read.norm(w['word']), float(w['start']), w['word'].strip())
@@ -122,7 +145,9 @@ def main():
             need = float(b.get('start') or 0) + (b['out'] - b['in']) / FPS
             if pr and float(pr) + 0.05 < need:
                 ins_errs.append('clip %s runs %.1fs, the insert needs %.1fs (start %.1fs + %d frames)' % (b['src'], float(pr), need, float(b.get('start') or 0), b['out'] - b['in']))
-    ready = ok_ts and not law and not todo and seams_ok and post_ok and not ins_errs
+    cut_f = cut_frames(cfg)
+    len_err = cut_length_error(name, frames, cut_f)
+    ready = ok_ts and not law and not todo and seams_ok and post_ok and not ins_errs and not len_err
     L += ['**Status: %s**' % ('READY FOR REVIEW' if ready else 'NOT READY (fix the items under Checks)'), '']
 
     if takes:
@@ -150,8 +175,9 @@ def main():
     L += ['## 2b. Cover (frame 0)', '',
           ('Frame %d of the host with the title "%s"%s. Instagram shows frame 0 as the default cover. '
            'Check the preview still `f0000.png`: eyes open, title clear of the face.'
-           % (cv['frame'], cv['title'], (', accent word "%s"' % cv['accent']) if cv.get('accent') else ''))
-          if cv else 'None (frame 0 is the first frame of the open).', '']
+           % (cv['frame'], cv['title'], ((', accent word "%s"' % cv['accent']) if cv.get('accent') else '')
+              + ((', the words "%s" huge behind the head' % cv['back']) if cv.get('back') else '')))
+          if cv and cv.get('title') else ('Frame %d of the host, no title (a captions-only look).' % cv['frame']) if cv else 'None (frame 0 is the first frame of the open).', '']
     L += ['## 3. Scenes (cut timeline)', '',
           '| # | time | frame | mode | motion | said | captions as displayed (**emphasis**) |', '|---|---|---|---|---|---|---|']
     for i, sc in enumerate(cfg['scenes']):
@@ -231,6 +257,7 @@ def main():
         L += ['## 4c. What the edit needs from the person', '', 'Shown on top of the storyboard (`qa/%s/storyboard/index.html`). Placeholders stand in until they arrive.' % name, '']
         L += ['- %s: %s' % (n['beat'], n['what']) for n in cfg['needs']] + ['']
     L += ['## 5. Checks', '',
+          '- Length (config frames against the cut `%s`): %s' % (cfg['src'], 'PASS, %d frames' % frames if not len_err else 'FAIL: ' + len_err),
           '- Structure (validateReel): %s' % ('PASS' if ok_ts else 'FAIL: ' + ts_msg),
           '- Inserts (follow card identity in src/brand.json, cutaway clips present and long enough): %s' % ('none' if not inserts else ('PASS' if not ins_errs else 'FAIL: ' + '. '.join(ins_errs))),
           '- Timeline law (scene changes and swap edges in real gaps, scene changes after sentence ends): %s'
@@ -268,4 +295,7 @@ def main():
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

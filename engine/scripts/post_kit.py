@@ -3,6 +3,12 @@
 
     python3 scripts/post_kit.py <name>            write script/<name>-post.md (organic) or -ad.md (paid)
     python3 scripts/post_kit.py <name> --check    always passes (kept so scene_map.py can call it)
+    python3 scripts/post_kit.py <name> --hand-over   print the caption (or the ad's primary text) to paste
+
+THEIR OWN COPY: a caption or primary text they trimmed is saved as script/<name>-post-mine.md (or -ad-mine.md), plain
+text only. No tool ever writes that file: a later draft, render or music pick refreshes the draft beside it, never
+their copy. --hand-over prints their copy when it exists, else the draft's text, and adds the Music credit line at the
+end when the reel's music needs one and the text doesn't carry it (a different track's line is replaced).
 
 ORGANIC: one caption, the script as short one-line blocks (hook and closer on their own lines),
 no hashtags, plus a link line if the config has one.
@@ -49,6 +55,28 @@ def music_credit(name, cfg):
     return (json.load(open(cp)).get(bed) or {}).get('line', '')
 
 
+def mine_path(name, cfg):
+    return os.path.join(ROOT, 'script', '%s-%s-mine.md' % (name, 'ad' if cfg.get('placement') == 'paid' else 'post'))
+
+
+def draft_text(path):
+    """The draft's text to paste: its first code block (the caption, or the ad's primary text)."""
+    m = re.search(r'```\n(.*?)\n```', open(path).read(), re.S) if os.path.exists(path) else None
+    return m.group(1).strip() if m else ''
+
+
+def hand_over(name):
+    cfg = reel_config.load(name)
+    mine = mine_path(name, cfg)
+    draft = os.path.join(ROOT, 'script', '%s-%s.md' % (name, 'ad' if cfg.get('placement') == 'paid' else 'post'))
+    text = open(mine).read().strip() if os.path.exists(mine) else draft_text(draft)
+    credit = music_credit(name, cfg)
+    if credit and credit not in text:   # the license asks for the credit everywhere the video goes: never lost to a trim
+        text = '\n'.join(l for l in text.splitlines() if not l.startswith('Music: ')).rstrip()
+        text = (text + '\n\n' if text else '') + credit
+    print(text)
+
+
 KEEP = 'Keep the Music line at the end in every place you post this video (its license asks for the credit).'
 
 
@@ -59,6 +87,9 @@ def main():
     name = a[0]
     if '--check' in a:
         print('post kit: PASS (drafts are optional)')
+        return
+    if '--hand-over' in a:
+        hand_over(name)
         return
     cfg = reel_config.load(name)
     post = cfg.get('post') or {}
@@ -87,8 +118,13 @@ def main():
              '```', '\n\n'.join(blocks[:-1] if credit else blocks) + ('\n\n' + link if link else '') + ('\n\n' + credit if credit else ''), '```']
         out = os.path.join(ROOT, 'script', '%s-post.md' % name)
     open(out, 'w').write('\n'.join(L) + '\n')
-    print('post kit: PASS, wrote %s%s' % (os.path.relpath(out, ROOT), ' (with the music credit line)' if credit else ''))
+    mine = mine_path(name, cfg)
+    print('post kit: PASS, wrote %s%s%s' % (os.path.relpath(out, ROOT), ' (with the music credit line)' if credit else '',
+          ('. Their own copy stays as it is: %s' % os.path.relpath(mine, ROOT)) if os.path.exists(mine) else ''))
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

@@ -7,6 +7,7 @@ import path from 'node:path';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const name = process.argv[2];
+if (name === '--help' || name === '-h') { console.log('usage: validate_reel.mjs <name>'); process.exit(0); }   // --help: the usage, nothing else
 if (!name) { console.error('usage: validate_reel.mjs <name>'); process.exit(2); }
 
 const entry = `

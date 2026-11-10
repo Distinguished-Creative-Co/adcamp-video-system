@@ -33,8 +33,11 @@ def probe(path):
 def tonemap_vf(trc):
     """The filter prefix that brings iPhone HDR (HLG) and PQ footage down to standard range, or '' for standard footage.
     Without it the picture comes out dim and gray once tagged bt709 (the start page's frames use it too)."""
-    if trc == 'arib-std-b67':   # HLG is built to show on standard screens: a direct conversion keeps its brightness
-        return 'zscale=tin=arib-std-b67:pin=bt2020:min=bt2020nc:t=bt709:p=bt709:m=bt709:r=tv:npl=100,format=yuv420p,'
+    if trc == 'arib-std-b67':   # iPhone HLG: tone-mapped (hable), a direct conversion clips the highlights to solid yellow
+        # chosen on a real iPhone clip: hable keeps skin natural and highlights intact (0.1% of pixels near max), where
+        # mobius left 3.7% and the direct conversion 78%
+        return ('zscale=tin=arib-std-b67:pin=bt2020:min=bt2020nc:t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,'
+                'tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p,')
     if trc == 'smpte2084':      # PQ needs real tone-mapping down to standard range
         return ('zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=mobius:desat=0,'
                 'zscale=t=bt709:m=bt709:r=tv,format=yuv420p,')
@@ -118,4 +121,7 @@ def main():
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

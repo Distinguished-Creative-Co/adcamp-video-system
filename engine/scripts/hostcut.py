@@ -14,6 +14,7 @@ Library use (last_take.py, hostcut_plan.py): probe_duration, detect_silences,
 detect_reset_spans, assert_cuts_in_silence, render_cut and the three exception classes.
 Python 3.9 compatible, standard library plus ffmpeg/ffprobe on PATH.
 """
+import os
 import argparse
 import re
 import subprocess
@@ -373,4 +374,7 @@ def main():
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

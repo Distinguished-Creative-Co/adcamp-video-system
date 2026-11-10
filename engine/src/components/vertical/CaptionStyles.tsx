@@ -4,6 +4,7 @@ import { accentFace, displayFace, type AccentFont } from '../vc/fonts';
 import type { Line } from '../../methodology/timeline';
 import type { CaptionLook } from '../../methodology/ReelConfig';
 import { LEAD_F } from '../../methodology/layout';
+import { AD_SAFE, adCapScale, capTop } from '../../methodology/adsafe';
 
 /**
  * Four more caption modes for full-screen shots (captionStyle):
@@ -14,7 +15,9 @@ import { LEAD_F } from '../../methodology/layout';
  *              italic serif with an underline that draws in
  * Every word appears on its spoken frame (layout reserved up front, so nothing jumps). The key word is the
  * one the config marks (key, else big), else the line's longest content word. A style's look sets the type
- * and color; without one the house sans, white and the brand accent are used.
+ * and color; without one the house sans, white and the brand accent are used. A paid ad keeps the block inside Meta's ad
+ * safe zone (adsafe.ts), no taller than 300 px (a taller block draws smaller), and a staircase steps in less when its widest
+ * row would reach the right edge.
  */
 export type CaptionMode = 'bigword' | 'pill' | 'editorial' | 'steps';
 export const CAPTION_MODES: CaptionMode[] = ['bigword', 'pill', 'editorial', 'steps'];
@@ -39,8 +42,8 @@ const shadowOf = (k?: CaptionLook['shadow']) => k === 'none' ? undefined : k ===
 const caseOf = (k?: CaptionLook['case']): React.CSSProperties['textTransform'] => k === 'upper' ? 'uppercase' : k === 'lower' ? 'lowercase' : undefined;
 
 export const StyledCaptions: React.FC<{
-  mode: CaptionMode; line?: Line; now: number; fps: number; opacity: number; look?: CaptionLook; serif?: AccentFont; cy?: number;
-}> = ({ mode, line, now, fps, opacity, look, serif, cy = 1290 }) => {
+  mode: CaptionMode; line?: Line; now: number; fps: number; opacity: number; look?: CaptionLook; serif?: AccentFont; cy?: number; paid?: boolean;
+}> = ({ mode, line, now, fps, opacity, look, serif, cy = 1290, paid = false }) => {
   if (!line || opacity <= 0) return null;
   const words = line.words.filter((w) => w.t);
   if (!words.length) return null;
@@ -55,7 +58,11 @@ export const StyledCaptions: React.FC<{
   const base: React.CSSProperties = { fontFamily: face.family, fontWeight: lk.weight ?? face.weight, fontStyle: face.italic ? 'italic' : undefined,
     textTransform: caseOf(lk.case), color: ink, textShadow: shadow, whiteSpace: 'nowrap', lineHeight: 1, ...stroke };
   const enter = ease((now - line.s + (LEAD_F + 1) / fps) * fps / 6);
-  const box = (h: number): React.CSSProperties => ({ position: 'absolute', left: LEFT, width: W, top: Math.min(cy - h / 2, 1470 - h), opacity: opacity * Math.min(1, enter * 1.5) });
+  const box = (h: number): React.CSSProperties => {
+    const k = adCapScale(h, paid);   // 1 unless a paid block is too tall: then it draws smaller, its top where the smaller block's would be
+    return { position: 'absolute', left: LEFT, width: W, top: capTop(cy, h * k, 1470, paid), opacity: opacity * Math.min(1, enter * 1.5),
+      ...(k < 1 ? { transform: `scale(${k})`, transformOrigin: '50% 0' } : {}) };
+  };
   const fit = (chars: number, want: number, k: number) => Math.min(want, W / (k * Math.max(chars, 2)));
   const money = (t: string): React.CSSProperties => { const m = moneyColor(t, lk); return m ? { color: m } : {}; };   // a dollar amount, when the look turns it on
 
@@ -131,7 +138,10 @@ export const StyledCaptions: React.FC<{
   const shownRows = rows.slice(-5);
   const small = lk.size ? lk.size * 0.5 : 64;
   const big = ki < 0 ? small : Math.min(small * 2.1, W * 0.62 / (ser.width * Math.max(words[ki].t.length, 3)));
-  const stepX = Math.min(70, (W - 420) / Math.max(shownRows.length - 1, 1));
+  const step0 = Math.min(70, (W - 420) / Math.max(shownRows.length - 1, 1));
+  const rowW = (r: (typeof rows)[number]) => r.key ? r.ws[0].t.length * ser.width * big
+    : r.ws.reduce((n, w) => n + w.t.length, 0) * face.width * small + small * 0.25 * (r.ws.length - 1);
+  const stepX = paid ? Math.max(0, shownRows.reduce((m, r, i) => (i ? Math.min(m, (AD_SAFE.right - 20 - LEFT - rowW(r)) / i) : m), step0)) : step0;
   const heights = shownRows.map((r) => (r.key ? big : small) * 1.12);
   const h = heights.reduce((a, b) => a + b, 0);
   let y = 0;

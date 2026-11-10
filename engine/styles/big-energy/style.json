@@ -36,10 +36,10 @@
  "effects_allowed": [
   "giant-captions",
   "snap-zoom",
-  "word-stamp",
-  "keycaps",
+  "lights-down",
+  "giant-number",
   "icon-strike",
-  "giant-number"
+  "keycaps"
  ],
  "hook_title": true
 }

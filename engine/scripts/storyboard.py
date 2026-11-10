@@ -2,6 +2,8 @@
 """The storyboard: the preview as a page the person reads and leaves notes on, before anything renders.
 
     python3 scripts/storyboard.py <name>        after the preview stills exist (make_reel.sh --preview)
+    python3 scripts/storyboard.py <name> --keep-notes   the same, leaving notes.json in place (cover_options.py uses it:
+                                                        a cover pick is not the round of notes being applied)
 
 One row per part of the reel (each scene, long ones split at sentence ends): its time, real preview stills, the
 words said, what moves on screen, what you hear. On top, what the edit still needs from the person ("needs" in the
@@ -13,6 +15,10 @@ Writes qa/<name>/storyboard/ with its stills in frames/, two ways to review:
     and the comment goes to Claude (read it with ArtifactComments; the thread sits on the part, #b03).
   - index.html, the fallback in a browser tab: python3 scripts/review_server.py <name> --until-done, a note box per
     part, Save notes and Done. Notes land in qa/<name>/storyboard/notes.json.
+When scripts/cover_options.py has written three covers (qa/<name>/covers.json), a "Your cover" row sits above Part 01:
+three stills side by side (covers/cover-a.jpg ...), the current one marked. In the pane each has its own comment
+target (#cover-a, #cover-b, #cover-c). On the local page each has a Use this cover button, saved as the note
+{"beat": "cover", "text": "pick b"}.
 """
 import html
 import datetime
@@ -27,7 +33,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 import adcamp_page  # noqa: E402
+import cover_options  # noqa: E402
 import reel_config  # noqa: E402
+import styles_lib as L  # noqa: E402
 
 FPS = 30
 SOUND_WORDS = {'transition_whoosh': 'a whoosh', 'element_land': 'a soft tap', 'state_change': 'a click', 'back_text_hit': 'a hit',
@@ -108,13 +116,14 @@ def what_moves(cfg, bt):
                 out.append('%s transition at %s' % (e['style'].capitalize(), tc(e['at'])))
         elif overlaps(e, a, b):
             detail = e.get('word') or e.get('label') or e.get('keys') or e.get('text') or e.get('value') or ''
-            label = 'A slide over the picture' if e['kind'] == 'card' else FX.get(e['kind'], e['kind'].replace('-', ' ').capitalize())
+            label = 'A slide over the picture' if e['kind'] == 'card' else FX.get(e['kind']) or L.RETIRED_EFFECTS.get(e['kind']) or e['kind'].replace('-', ' ').capitalize()
             out.append('%s%s at %s' % (label, (' (%s)' % detail) if detail else '', tc(e['in'])))
     for z in cfg.get('zooms') or []:
         if a <= z.get('at', -1) < b:
             out.append('%s at %s' % ('Camera pushes in' if z.get('scale', 1) > 1 else 'Camera eases back out', tc(z['at'])))
-    if a == 0 and cfg.get('cover'):
-        out.append('Cover title (what shows before it plays): "%s"' % cfg['cover']['title'])
+    if a == 0 and (cfg.get('cover') or {}).get('title'):
+        out.append('Cover title (what shows before it plays): "%s"' % cfg['cover']['title']
+                   + (', with "%s" behind you' % cfg['cover']['back'] if cfg['cover'].get('back') else ''))
     return out
 
 
@@ -135,9 +144,12 @@ def sounds(cfg, bt):
 
 
 def main():
-    if len(sys.argv) != 2:
+    args = [a for a in sys.argv[1:] if a != '--keep-notes']
+    keep_notes = '--keep-notes' in sys.argv[1:]   # a cover pick or new covers: the notes not yet applied stay where they are
+    if len(args) != 1:
         sys.exit(__doc__)
-    name = sys.argv[1]
+    name = args[0]
+    cover_options.ensure(name)   # covers made before a restyle or a color change are carried first, never left stale
     cfg = reel_config.load(name)
     prev = os.path.join(ROOT, 'qa', name, 'preview')
     stills = sorted(int(f[1:5]) for f in os.listdir(prev) if f.startswith('f') and f.endswith('.png')) if os.path.isdir(prev) else []
@@ -145,7 +157,7 @@ def main():
         sys.exit('storyboard: no preview stills yet. Run make_reel.sh <video> %s --preview first.' % name)
     out_dir = os.path.join(ROOT, 'qa', name, 'storyboard')
     notes = os.path.join(out_dir, 'notes.json')
-    if os.path.exists(notes):   # last round's notes were applied: keep them, but never let them count again
+    if os.path.exists(notes) and not keep_notes:   # last round's notes were applied: keep them, but never let them count again
         os.rename(notes, os.path.join(out_dir, 'notes-applied-%s.json' % datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
     fr_dir = os.path.join(out_dir, 'frames')
     if os.path.isdir(fr_dir):
@@ -177,18 +189,44 @@ def main():
                      'moves': moves, 'hear': hear})
     needs = cfg.get('needs') or []
     title = (cfg.get('cover') or {}).get('title') or name.replace('-', ' ')
-    pane, local = page_bodies(title, tc(cfg['frames']), rows, needs)
+    covers = cover_row(name, cfg, out_dir)
+    pane, local = page_bodies(title, tc(cfg['frames']), rows, needs, covers)
     adcamp_page.write(out_dir, html.escape(title), local, extra_css=STORYBOARD_CSS, pane_body=pane)
-    files = ['pane.html'] + ['frames/' + f for f in sorted(os.listdir(fr_dir))]
+    files = ['pane.html'] + ['frames/' + f for f in sorted(os.listdir(fr_dir))] + ['covers/cover-%s.jpg' % c['x'] for c in covers]
     adcamp_page.files_map(out_dir, files[1:])
     print('storyboard: qa/%s/storyboard/pane.html (%d parts, %d stills%s). In the Claude app publish pane.html with its frames '
           '(files.json). Elsewhere: python3 scripts/review_server.py %s --until-done'
           % (name, len(rows), len(files) - 1, ', %d needs' % len(needs) if needs else '', name))
 
 
-def page_bodies(title, length, rows, needs):
+def cover_row(name, cfg, out_dir):
+    """The three covers from scripts/cover_options.py (qa/<name>/covers.json), when their stills exist: letter, what it
+    is in plain words, and whether it is the cover the video has now."""
+    rec = os.path.join(ROOT, 'qa', name, 'covers.json')
+    if not os.path.exists(rec):
+        return []
+    ok, why = cover_options.status(name, cfg)
+    if not ok:   # never stale covers on the page
+        print('storyboard: no cover row (%s).%s' % (why, '' if why == cover_options.RECUT else
+              ' Write the cover options again: cover_options.py %s --options <file>' % name))
+        return []
+    opts = json.load(open(rec)).get('options') or {}
+    now = cfg.get('cover') or {}
+    out = []
+    for x in 'abc':
+        o = opts.get(x)
+        if not o or not os.path.exists(os.path.join(out_dir, 'covers', 'cover-%s.jpg' % x)):
+            return []
+        on = all((o.get(k) or None) == (now.get(k) or None) for k in ('frame', 'title', 'accent', 'back', 'backY'))
+        what = ('This frame, no title' if not (o.get('title') or '').strip() else
+                'Your words behind you, your title in front' if o.get('back') else 'Your title over this frame')
+        out.append({'x': x, 'X': x.upper(), 'what': what, 'on': on})
+    return out
+
+
+def page_bodies(title, length, rows, needs, covers=()):
     """The storyboard's body twice: for the pane (a comment button per part, the Claude app's own comment loop) and
-    for a local tab (a note box per part, Save notes and Done)."""
+    for a local tab (a note box per part, Save notes and Done). covers: the "Your cover" row above Part 01."""
     words = html.escape(title).split(' ')
     head = ' '.join(words[:-1]) + (' ' if len(words) > 1 else '') + '<span class="y">%s</span>' % words[-1]
     if needs:
@@ -215,13 +253,28 @@ def page_bodies(title, length, rows, needs):
                  '<b>Save notes</b> keeps them as you go. Press <b>Done</b> when you have finished, and Claude takes it from there.')
     top = adcamp_page.top('Video System', 'Storyboard &middot; %s' % length)
     btn = '<div class="beat-act"><button type="button" class="btn btn-ghost" data-comment hidden>Comment on this part</button></div>'
+    def cover_sec(act, how):
+        if not covers:
+            return ''
+        cards = ''.join(
+            ('<div class="cover-opt%s" id="cover-%s" data-comment-target><img src="covers/cover-%s.jpg" alt="Cover %s" loading="lazy" width="162" height="288">'
+             '<p class="cov-name">Cover %s%s</p><p class="cov-what">%s</p>%s</div>')
+            % (' on' if c['on'] else '', c['x'], c['x'], c['X'], c['X'], ' <span class="tag-on">Your cover now</span>' if c['on'] else '',
+               html.escape(c['what']), act.format(**c)) for c in covers)
+        return ('<section class="card lift covers" id="covers"><div class="beat-head"><span class="chip">Your cover</span>'
+                '<span class="time">What people see before your video plays</span></div><p class="foot">%s</p>'
+                '<div class="cover-grid">%s</div></section>' % (how, cards))
+    cov_btn = '<div class="beat-act"><button type="button" class="btn btn-ghost" data-comment hidden>Comment on this cover</button></div>'
+    cov_pick = '<div class="beat-act"><button type="button" class="btn btn-ghost" data-pick="{x}">Use this cover</button></div>'
     pane = ('<main class="page">' + hero.format(top=top, head=head, how=pane_how, need=need)
+            + cover_sec(cov_btn, 'Pick the one you like best. Press <b>Comment on this cover</b> and say so, or ask for different words.')
             + ''.join(row(r, btn) for r in rows)
             + '<p class="foot end">Looks right? Tell Claude to render it. Want a change after that? Comment on the part here, '
               'and the new version lands next to the first.</p></main>' + PANE_JS)
     note = ('<label class="note"><span class="label">Note for part {n:02d}</span><textarea data-beat="{id}" rows="2" '
             'placeholder="Anything to change here? Leave it blank if it looks good."></textarea></label>')
     local = ('<main class="page">' + hero.format(top=top, head=head, how=local_how, need=need)
+             + cover_sec(cov_pick, 'Pick the one you like best, or ask for different words in the note on Part 01.')
              + ''.join(row(r, note.format(**r)) for r in rows) + '</main>'
              + '<div class="bar"><span id="status" aria-live="polite"></span><button type="button" class="btn btn-ghost" id="save">Save notes</button>'
                '<button type="button" class="btn btn-y" id="go">Done</button></div>' + LOCAL_JS)
@@ -244,6 +297,13 @@ figcaption { font-size: 11px; color: var(--t-foot); font-variant-numeric: tabula
 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .cols > * { min-width: 0; }
 .beat-act { display: flex; }
+.cover-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.cover-opt { display: grid; gap: 6px; align-content: start; padding: 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--inner); scroll-margin-top: 16px; }
+.cover-opt.on, .cover-opt:target { border-color: var(--yellow); }
+.cover-opt img { width: 100%; height: auto; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 10px; }
+.cov-name { margin: 0; font-weight: 800; }
+.cov-what { margin: 0; font-size: 14px; color: var(--t-sub); }
+.tag-on { margin-left: 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--yellow); }
 ol.needs { margin: 0; padding-left: 20px; color: var(--t-body); display: grid; gap: 4px; }
 ol.needs a { color: var(--yellow); font-weight: 700; }
 .none { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
@@ -267,7 +327,7 @@ PANE_JS = """<script>
       document.querySelectorAll('[data-comment]').forEach(function (b) {
         b.hidden = false;
         b.addEventListener('click', function () {
-          c.openComposer({ element: b.closest('section') }).catch(function (e) {
+          c.openComposer({ element: b.closest('[data-comment-target]') }).catch(function (e) {
             if (e && (e.code === 'unavailable' || e.code === 'not_granted')) {
               document.querySelectorAll('[data-comment]').forEach(function (x) { x.hidden = true; });
             }
@@ -297,6 +357,14 @@ LOCAL_JS = """<script>
       .then(function (r) { if (!r.ok) throw new Error(r.status); status.textContent = done; })
       .catch(function () { status.textContent = 'Could not save. Copy your notes into the chat instead.'; });
   }
+  // a cover pick is saved at once, as the note {"beat": "cover", "text": "pick b"}
+  document.querySelectorAll('[data-pick]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var x = b.dataset.pick;
+      document.querySelectorAll('.cover-opt').forEach(function (c) { c.classList.toggle('on', c.id === 'cover-' + x); });
+      send([{ beat: 'cover', text: 'pick ' + x }], 'Cover ' + x.toUpperCase() + ' picked. Press Done when you have finished.');
+    });
+  });
   document.getElementById('save').addEventListener('click', function () {
     var n = collect(), c = count(n); send(n, c ? 'Saved ' + c + ' note' + (c > 1 ? 's' : '') + '. Press Done when you are finished.' : 'Saved. No notes.');
   });
@@ -309,4 +377,7 @@ LOCAL_JS = """<script>
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

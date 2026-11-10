@@ -31,6 +31,25 @@ export type SansFont = keyof typeof SANS_FACES;
 
 const sansKey: SansFont = brand.sans in SANS_FACES ? (brand.sans as SansFont) : 'hanken';
 export const SANS: string = SANS_FACES[sansKey]();
+/** Average glyph width in em of each brand sans at weight 800, measured on rendered mixed-case words (2026-11-09),
+ *  so text that has to fit a box can be sized for the face actually in use. */
+const SANS_WIDTHS: Record<SansFont, number> = { hanken: 0.47, inter: 0.523, montserrat: 0.555, dmsans: 0.505, poppins: 0.552 };
+export const SANS_WIDTH: number = SANS_WIDTHS[sansKey];
+/** Glyph widths in em of each brand sans at weight 800, measured on a rendered still (2026-11-10): W, M, w, m, the
+ *  average other capital and lowercase letter, and the space. Text that has to fit a box is sized on these. */
+const GLYPHS: Record<SansFont, { W: number; M: number; w: number; m: number; cap: number; low: number; space: number }> = {
+  hanken: { W: 0.985, M: 0.85, w: 0.753, m: 0.838, cap: 0.627, low: 0.486, space: 0.26 },
+  inter: { W: 1.072, M: 0.933, w: 0.861, m: 0.917, cap: 0.682, low: 0.543, space: 0.219 },
+  montserrat: { W: 1.18, M: 0.941, w: 0.941, m: 1.033, cap: 0.712, low: 0.579, space: 0.291 },
+  dmsans: { W: 1.018, M: 0.877, w: 0.824, m: 0.934, cap: 0.645, low: 0.533, space: 0.232 },
+  poppins: { W: 1.07, M: 0.925, w: 0.885, m: 1.057, cap: 0.665, low: 0.574, space: 0.191 },
+};
+/** The width of `t` in em in the brand sans at weight 800 (widest glyphs counted at their own width). */
+export const sansEms = (t: string): number => {
+  const g = GLYPHS[sansKey];
+  return [...t].reduce((n, ch) => n + (ch === 'W' ? g.W : ch === 'M' ? g.M : ch === 'w' ? g.w : ch === 'm' ? g.m : ch === ' ' ? g.space
+    : /[A-Z]/.test(ch) ? g.cap : /[0-9]/.test(ch) ? g.cap * 0.9 : g.low), 0);
+};
 
 /** Italic display serifs. `width` is the average glyph width in em, used to fit a row. */
 const SERIF_FACES = {

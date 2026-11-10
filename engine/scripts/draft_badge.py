@@ -7,6 +7,7 @@ A draft is the edit at half size so the creator can judge it in motion before ap
 render. The badge says it is not the one to post. Drawn with Pillow (both cutout environments have it)
 so the draft never depends on an ffmpeg built with drawtext.
 """
+import os
 import sys
 
 from PIL import Image, ImageDraw, ImageFont
@@ -32,4 +33,7 @@ def main():
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

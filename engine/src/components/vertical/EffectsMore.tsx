@@ -1,7 +1,8 @@
 import React from 'react';
 import { GOLD, ACCENT_ON_FOOTAGE } from '../vc/style';
-import { SANS, accentFace, handFace, romanSerif } from '../vc/fonts';
+import { SANS, SANS_WIDTH, sansEms, accentFace, handFace, romanSerif } from '../vc/fonts';
 import { easeOutCubic } from '../../methodology/layout';
+import { arrowNoteTop, noteWallShift, pinnedTop } from '../../methodology/adsafe';
 import type { Effect } from '../../methodology/ReelConfig';
 
 /**
@@ -15,6 +16,7 @@ import type { Effect } from '../../methodology/ReelConfig';
  *   note-wall     paper notes with short lines stick up around the head, one per beat
  *   arrow-note    a handwritten note with an arrow drawn to a point on screen
  *   comment-box   the keyword types into a comment field, it posts, a heart pops
+ *   lights-down   the room behind the host dims and softens for one line, the host stays lit (drawn in AvatarView: lightsDownAt)
  */
 const BAND = { x: 160, y: 130, w: 760, h: 520 } as const;
 const PLATE = 'rgba(20,21,26,0.86)';
@@ -36,13 +38,25 @@ export const ListTracker: React.FC<{ fx: Extract<Effect, { kind: 'list-tracker' 
   const n = fx.items.filter((it) => it.at <= f).length;
   const cur = n ? fx.items[n - 1] : null;
   const p = cur ? easeOutCubic(clamp01((f - cur.at) / 7)) : 0;
-  const size = cur ? Math.min(64, 560 / (0.56 * Math.max(cur.t.length, 6))) : 64;
+  // the item fits its box (520 px beside the count) in whichever brand sans is in use: one line down to 34 px, then two
+  // lines, never under 28 px (a long item is the member's cue to keep items short)
+  // the real width in em of the brand sans in use (fonts.ts sansEms, measured per glyph class)
+  const ems = sansEms;
+  const fit = cur ? 520 / (1.08 * Math.max(ems(cur.t), 6 * SANS_WIDTH)) : 64;
+  // the longest single word must fit a line too: it sets a lower size, down to 28 px, and past that it breaks with a hyphen
+  const longest = cur ? Math.max(...cur.t.split(/\s+/).map(ems), SANS_WIDTH) : SANS_WIDTH;
+  const wfit = 520 / (1.08 * longest);
+  const hyphen = wfit < 28;
+  const two = fit < 34 || hyphen;
+  const size = Math.min(two ? Math.max(28, Math.min(42, fit * 1.9)) : Math.min(64, fit), Math.max(28, wfit));   // two lines of 42 fill the 90 px row
+  const shown = cur && hyphen ? cur.t.split(/(\s+)/).map((w) => (w.length > 8 ? w.split('').join('\u00AD') : w)).join('') : cur?.t;
   return (
     <Plate lf={lf} len={len} h={200}>
       <div style={{ fontFamily: SANS, fontWeight: 800, fontSize: 26, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.62)' }}>{fx.title}</div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 22, marginTop: 14, overflow: 'hidden', height: 90 }}>
+      <div style={{ display: 'flex', alignItems: two ? 'center' : 'baseline', gap: 22, marginTop: 14, overflow: 'hidden', height: 90 }}>
         <span style={{ fontFamily: SANS, fontWeight: 900, fontSize: 58, color: ACCENT_ON_FOOTAGE, minWidth: 150 }}>{pad2(n)}<span style={{ opacity: 0.5, fontSize: 34 }}>/{pad2(fx.items.length)}</span></span>
-        {cur ? <span style={{ fontFamily: SANS, fontWeight: 800, fontSize: size, color: '#fff', whiteSpace: 'nowrap', opacity: p, transform: `translateY(${(1 - p) * 40}px)`, display: 'inline-block' }}>{cur.t}</span> : null}
+        {cur ? <span style={{ fontFamily: SANS, fontWeight: 800, fontSize: size, color: '#fff', whiteSpace: two ? 'normal' : 'nowrap', lineHeight: two ? 1.04 : undefined, hyphens: 'manual',
+          maxWidth: 520, overflow: 'hidden', opacity: p, transform: `translateY(${(1 - p) * 40}px)`, display: 'inline-block' }}>{shown}</span> : null}
       </div>
     </Plate>
   );
@@ -56,6 +70,15 @@ export const snapZoomAt = (fx: Extract<Effect, { kind: 'snap-zoom' }>, frame: nu
   const home = clamp01((fx.out - frame) / 12);
   const snap = easeOutCubic(clamp01((frame - fx.at) / 2));
   return 1 + ((1.05 + (s - 1.05) * snap) - 1) * home;
+};
+
+/** lights-down as a light level: 0 (the room as shot) -> 1 (fully down) over 8 frames, held, and back to 0 on the
+ *  entry's last frame, so its first and last frames match the plain footage. */
+export const LIGHTS_EASE_F = 8;
+export const lightsDownAt = (fx: { in: number; out: number }, frame: number): number => {
+  if (frame < fx.in || frame >= fx.out) return 0;
+  const p = clamp01(Math.min(frame - fx.in, fx.out - 1 - frame) / LIGHTS_EASE_F);
+  return p * p * (3 - 2 * p);
 };
 
 export const QuoteCard: React.FC<{ fx: Extract<Effect, { kind: 'quote-card' }>; lf: number; len: number }> = ({ fx, lf, len }) => {
@@ -73,13 +96,19 @@ export const QuoteCard: React.FC<{ fx: Extract<Effect, { kind: 'quote-card' }>; 
   );
 };
 
-export const PinnedLine: React.FC<{ fx: Extract<Effect, { kind: 'pinned-line' }>; lf: number; len: number; away: number }> = ({ fx, lf, len, away }) => {
+export const PinnedLine: React.FC<{ fx: Extract<Effect, { kind: 'pinned-line' }>; lf: number; len: number; away: number; paid?: boolean }> = ({ fx, lf, len, away, paid = false }) => {
   const { e, out } = env(lf, len, 8);
+  const hop = Math.abs(Math.sin((lf / 30) * Math.PI * 1.6)) * 9 - 4;   // point "down": the arrow hops toward the button below, about 1.6 times a second
   return (
-    <div style={{ position: 'absolute', left: 0, right: 0, top: 236, display: 'flex', justifyContent: 'center', opacity: e * out * (1 - away) }}>
+    <div style={{ position: 'absolute', left: 0, right: 0, top: pinnedTop(paid, fx.y), display: 'flex', justifyContent: 'center', opacity: e * out * (1 - away) }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: PLATE, borderRadius: 999, padding: '12px 28px', border: '1px solid rgba(255,255,255,0.16)',
         fontFamily: SANS, fontWeight: 800, fontSize: 34, color: '#fff', transform: `translateY(${(1 - e) * -20}px)` }}>
-        <span style={{ width: 14, height: 14, borderRadius: '50%', background: ACCENT_ON_FOOTAGE, display: 'inline-block' }} />{fx.text}
+        {fx.point === 'down' ? null : <span style={{ width: 14, height: 14, borderRadius: '50%', background: ACCENT_ON_FOOTAGE, display: 'inline-block' }} />}{fx.text}
+        {fx.point === 'down' ? (
+          <svg width={26} height={26} viewBox="0 0 24 24" style={{ transform: `translateY(${hop}px)` }}>
+            <path d="M12 3v16M5 12l7 7 7-7" fill="none" stroke={ACCENT_ON_FOOTAGE} strokeWidth={3.4} strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ) : null}
       </div>
     </div>
   );
@@ -110,10 +139,11 @@ export const CoverStory: React.FC<{ fx: Extract<Effect, { kind: 'cover-story' }>
 
 const SPOTS = [{ x: 180, y: 170, r: -5 }, { x: 600, y: 160, r: 4 }, { x: 170, y: 410, r: 3 }, { x: 610, y: 420, r: -4 }];
 
-export const NoteWall: React.FC<{ fx: Extract<Effect, { kind: 'note-wall' }>; lf: number; len: number }> = ({ fx, lf, len }) => {
+export const NoteWall: React.FC<{ fx: Extract<Effect, { kind: 'note-wall' }>; lf: number; len: number; paid?: boolean }> = ({ fx, lf, len, paid = false }) => {
   const f = fx.in + lf;
   const out = clamp01((len - lf) / 8);
   const hand = handFace();
+  const shift = noteWallShift(paid, fx.y);   // its own y moves the whole wall
   return (
     <div style={{ position: 'absolute', inset: 0, opacity: out }}>
       {fx.notes.map((n, i) => {
@@ -122,7 +152,7 @@ export const NoteWall: React.FC<{ fx: Extract<Effect, { kind: 'note-wall' }>; lf
         const sp = SPOTS[i];
         const k = easeOutCubic(p);
         return (
-          <div key={i} style={{ position: 'absolute', left: sp.x, top: sp.y, width: 300, minHeight: 150, padding: '34px 24px 22px', boxSizing: 'border-box',
+          <div key={i} style={{ position: 'absolute', left: sp.x, top: sp.y + shift, width: 300, minHeight: 150, padding: '34px 24px 22px', boxSizing: 'border-box',
             background: '#F6EFD9', borderRadius: 6, boxShadow: '0 18px 40px rgba(0,0,0,0.45)', transform: `rotate(${sp.r * (2 - k)}deg) scale(${1.25 - 0.25 * k})`, opacity: k }}>
             <div style={{ position: 'absolute', top: -14, left: 110, width: 90, height: 30, background: 'rgba(255,255,255,0.55)', transform: 'rotate(-3deg)' }} />
             <div style={{ fontFamily: hand, fontWeight: 700, fontSize: Math.min(52, 470 / Math.max(n.t.length, 8) * 1.6), lineHeight: 1.05, color: '#1D1B17' }}>{n.t}</div>
@@ -133,11 +163,11 @@ export const NoteWall: React.FC<{ fx: Extract<Effect, { kind: 'note-wall' }>; lf
   );
 };
 
-export const ArrowNote: React.FC<{ fx: Extract<Effect, { kind: 'arrow-note' }>; lf: number; len: number }> = ({ fx, lf, len }) => {
+export const ArrowNote: React.FC<{ fx: Extract<Effect, { kind: 'arrow-note' }>; lf: number; len: number; paid?: boolean }> = ({ fx, lf, len, paid = false }) => {
   const { e, out } = env(lf, len, 8);
   const hand = handFace();
   const left = fx.x >= 540;               // the note sits on the far side of the frame from its target
-  const nx = left ? 190 : 640, ny = 210;
+  const nx = left ? 190 : 640, ny = arrowNoteTop(fx.text, paid, fx.noteY);   // its own noteY, else 210 (a paid ad: below Meta's top bar)
   const sx = left ? nx + 250 : nx + 20, sy = ny + 110;
   const draw = easeOutCubic(clamp01((lf - 6) / 12));
   const ang = Math.atan2(fx.y - sy, fx.x - sx);

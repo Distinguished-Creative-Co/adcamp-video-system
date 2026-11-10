@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Foreground cutouts for BACK TEXT (big highlighted words that sit behind the host).
+"""Foreground cutouts for BACK TEXT (big highlighted words that sit behind the host) and LIGHTS DOWN.
 
     "$AVS_MATTE_PYTHON" scripts/matte_reel.py <name>
 
@@ -7,8 +7,10 @@ For every entry in the config's "backText", cuts the host out of the cut over th
 frames with MediaPipe's selfie segmenter (Apache-2.0, runs locally) and writes
 public/host/<stem>-fg-<in>-<out>.webm: the same pixels as the cut, with an alpha channel that
 keeps only the person. The engine draws  footage -> back text -> this cutout,  so the words
-read as standing in the room behind the host. The thumbnail cutout is one frame, written as a
-PNG. Only the listed frames are processed. Cutouts are reused while the cut and the range are
+read as standing in the room behind the host. A lights-down effect dims the room behind the
+host, so its cutout (<stem>-fg-ld-<in>-<out>.webm) has its edge pulled in and feathered: against a
+dark room a soft edge that carries the bright background would show as a halo. The thumbnail
+cutout, and a cover with words behind the host, is one frame, written as a PNG. Only the listed frames are processed. Cutouts are reused while the cut and the range are
 unchanged.
 
 The segmenter runs twice per frame: once on the full frame to find the person, once on a
@@ -32,6 +34,8 @@ MODEL_NAME = 'selfie_multiclass_256x256.tflite'
 BLEND = 0.2        # share of the previous frame's mask kept (temporal smoothing)
 PAD = 0.12         # padding around the person box for the crop pass
 GF_R, GF_EPS = 6, 2e-3   # guided filter radius (px) and regularisation
+LD_ERODE, LD_FEATHER = 2, 1   # lights-down edge: pulled in this many px, then softened by a box of this radius (twice)
+LD_TAG = 'ld-e%d-f%d-body' % (LD_ERODE, LD_FEATHER)   # part of the reuse stamp, so a changed edge recuts
 
 
 def fg_path(stem, a, b):
@@ -54,6 +58,35 @@ def box(a, r):
     return ((c[k:, k:] - c[:-k, k:] - c[k:, :-k] + c[:-k, :-k]) / (k * k)).astype(np.float32)
 
 
+def erode(a, r):
+    """Soft erosion: each pixel takes the lowest value within a disk of radius r."""
+    import numpy as np
+    out = a.copy()
+    p = np.pad(a, r, mode='edge')
+    h, w = a.shape
+    for dy in range(-r, r + 1):
+        for dx in range(-r, r + 1):
+            if (dx or dy) and dx * dx + dy * dy <= r * r:
+                np.minimum(out, p[r + dy:r + dy + h, r + dx:r + dx + w], out=out)
+    return out
+
+
+def fill_down(mask):
+    """The body below the shoulders, made whole: from the first row as wide as the shoulders down, every column that has
+    the person in it stays the person to the bottom of the frame. The small model drops parts of a torso behind a hand or a
+    child it is holding, and a hole in the body reads as a dark blotch once the room dims. The head and hair stay as cut."""
+    import numpy as np
+    on = mask > 0.5
+    wide = on.sum(1)
+    if not wide.any():
+        return mask
+    y = int(np.argmax(wide >= 0.8 * wide.max()))
+    body = np.maximum.accumulate(on[y:], axis=0)
+    out = mask.copy()
+    out[y:] = np.maximum(out[y:], body.astype(np.float32))
+    return out
+
+
 def guided(mask, guide, r, eps):
     """Guided filter (He et al.): the mask takes its edges from the gray picture."""
     m_i, m_p = box(guide, r), box(mask, r)
@@ -68,11 +101,15 @@ def main():
     name = sys.argv[1]
     cfg = reel_config.load(name)
     items = list(cfg.get('backText') or [])
+    items += [{'in': e['in'], 'out': e['out'], 'ld': True} for e in cfg.get('effects') or [] if e.get('kind') == 'lights-down']
     th = cfg.get('thumbnail')
     if th:
         items.append({'in': int(th['frame']), 'out': int(th['frame']) + 1, 'thumb': True})
+    cv = cfg.get('cover') or {}
+    if cv.get('back') and cfg.get('placement') != 'paid' and not (th and int(th['frame']) == int(cv['frame'])):   # a words-behind cover: the same one-frame cutout
+        items.append({'in': int(cv['frame']), 'out': int(cv['frame']) + 1, 'thumb': True})
     if not items:
-        print('matte: %s has no backText or thumbnail, nothing to do' % name)
+        print('matte: %s has no backText, lights-down, thumbnail or words-behind cover, nothing to do' % name)
         return
     cut = os.path.join(ROOT, 'public', reel_config.host_file(cfg))   # the color-graded picture when there is one
     stem = reel_config.stem(cfg)
@@ -80,12 +117,14 @@ def main():
     todo = []
     for it in items:
         a, b = int(it['in']), int(it['out'])
-        out = os.path.join(ROOT, 'public', 'host', '%s-thumb-%d.png' % (stem, a)) if it.get('thumb') else fg_path(stem, a, b)
+        out = (os.path.join(ROOT, 'public', 'host', '%s-thumb-%d.png' % (stem, a)) if it.get('thumb') else
+               os.path.join(ROOT, 'public', 'host', '%s-fg-ld-%d-%d.webm' % (stem, a, b)) if it.get('ld') else fg_path(stem, a, b))
         stamp = out + '.src'
-        if os.path.exists(out) and os.path.exists(stamp) and open(stamp).read().strip() == cut_id:
+        want = cut_id + (' ' + LD_TAG if it.get('ld') else '')
+        if os.path.exists(out) and os.path.exists(stamp) and open(stamp).read().strip() == want:
             print('matte: reuse %s' % os.path.relpath(out, ROOT))
             continue
-        todo.append((a, b, out, stamp))
+        todo.append((a, b, out, stamp, want, bool(it.get('ld'))))
     if not todo:
         return
 
@@ -100,7 +139,9 @@ def main():
         m = [np.asarray(x.numpy_view()).reshape(rgb.shape[0], rgb.shape[1]) for x in res.confidence_masks]
         return 1.0 - m[0] if len(m) > 1 else m[0]   # class 0 is the background
 
-    for a, b, out, stamp in todo:
+    import time
+    for a, b, out, stamp, want, ld in todo:
+        t0 = time.time()
         seg_full, seg_crop = ImageSegmenter.create_from_options(opts), ImageSegmenter.create_from_options(opts)
         # frames by TIME, not index: a cut spliced from many takes can drop a frame at a join, and
         # the renderer seeks by time, so the cutout must match it or the host appears twice
@@ -133,16 +174,23 @@ def main():
             if prev is not None:
                 mask = (1 - BLEND) * mask + BLEND * prev
             prev = mask
+            if ld:   # a dark room: the body made whole, the edge pulled in off the background, then feathered
+                mask = erode(fill_down(mask), LD_ERODE)
+                for _ in range(2):
+                    mask = box(mask, LD_FEATHER)
             enc.stdin.write(np.dstack([rgb, (mask * 255).astype(np.uint8)]).tobytes())
             done += 1
         rd.stdout.close(); rd.wait(); enc.stdin.close(); enc.wait(); seg_full.close(); seg_crop.close()
         if done != b - a:
             sys.exit('matte: %s got %d of %d frames' % (out, done, b - a))
-        open(stamp, 'w').write(cut_id)
-        print('matte: %s (%d frames)' % (os.path.relpath(out, ROOT), done))
+        open(stamp, 'w').write(want)
+        print('matte: %s (%d frames, %.1fs)' % (os.path.relpath(out, ROOT), done, time.time() - t0))
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()
     sys.stdout.flush()
     sys.stderr.flush()

@@ -6,6 +6,7 @@ import { CharcoalBg } from '../vc/CremeStage';
 import { thumbFgSrc, type ReelConfig } from '../../methodology/ReelConfig';
 import { place } from '../../methodology/layout';
 import { useGrade } from './Grade';
+import { BehindWords, Cover } from './Cover';
 
 /**
  * COMPANION PACK: covers and static ads rendered from the SAME config
@@ -39,8 +40,10 @@ const Title: React.FC<{ title: string; accent?: string; size: number }> = ({ tit
 
 /** The host at the cover frame in an explicit w x h box, face-anchored with the engine's own
  *  camera math (cover fit, clamped: no footage edge, face kept in frame). */
-const Host: React.FC<{ cfg: ReelConfig; frame: number; w: number; h: number; radius?: number }> = ({ cfg, frame, w, h, radius = 0 }) => {
-  const p = place({ x: 0, y: 0, w, h, r: radius, ax: 0.5, ay: 0.45 }, 1, cfg.faceX, cfg.faceY, cfg.source.w, cfg.source.h);
+const Host: React.FC<{ cfg: ReelConfig; frame: number; w: number; h: number; radius?: number; cover?: ReelConfig['cover'] }> = ({ cfg, frame, w, h, radius = 0, cover }) => {
+  const behind = !!cover?.back && cfg.placement !== 'paid';
+  // a words-behind cover keeps the top of the frame, where the words are (a shorter shape crops from the bottom instead)
+  const p = place({ x: 0, y: 0, w, h, r: radius, ax: 0.5, ay: behind ? 1 : 0.45 }, 1, cfg.faceX, cfg.faceY, cfg.source.w, cfg.source.h);
   const gr = useGrade(cfg.grade);
   return (
     <div style={{ position: 'relative', width: w, height: h, overflow: 'hidden', borderRadius: radius, flex: 'none',
@@ -48,6 +51,7 @@ const Host: React.FC<{ cfg: ReelConfig; frame: number; w: number; h: number; rad
       <div style={{ position: 'absolute', left: p.left, top: p.top, width: p.width, height: p.height }}>
         <OffthreadVideo muted src={staticFile(cfg.src)} startFrom={frame} style={{ width: '100%', height: '100%', objectFit: 'fill', filter: gr.filter }} />
       </div>
+      {behind ? <BehindWords cfg={cfg} cover={cover} box={{ left: p.left, top: p.top, width: p.width, height: p.height }} filter={gr.filter} /> : null}
       {gr.defs}
       {gr.vignette}
     </div>
@@ -103,10 +107,26 @@ export const Companion: React.FC<{ cfg: ReelConfig | null; format: CompanionForm
   const button = cta && cta.k.kind === 'cta' ? cta.k.button : paid ? 'Click Learn More' : '';
   const u = W / 1080; // scale unit
 
+  if (format === 'cover-feed' && cover.back && !paid) {
+    // words behind you in the 4:5 feed: the whole vertical cover, fitted to the height, so the words, the face and the
+    // title keep the places they have on the reel (the title below the chin), with a soft blurred copy of the frame at the sides
+    const k = H / 1920, w = 1080 * k;
+    const gr = { filter: 'blur(36px) brightness(0.55) saturate(0.9)' };
+    return (
+      <AbsoluteFill style={{ backgroundColor: '#131419', overflow: 'hidden', ['--accent-rgb' as string]: ACCENT_RGB } as React.CSSProperties}>
+        <OffthreadVideo muted src={staticFile(cfg.src)} startFrom={cover.frame} style={{ position: 'absolute', left: -60, top: -60, width: W + 120, height: H + 120, objectFit: 'cover', filter: gr.filter }} />
+        <div style={{ position: 'absolute', left: (W - w) / 2, top: 0, width: w, height: H, overflow: 'hidden', boxShadow: '0 0 80px rgba(0,0,0,0.5)' }}>
+          <div style={{ position: 'absolute', left: 0, top: 0, width: 1080, height: 1920, transform: `scale(${k})`, transformOrigin: '0 0' }}>
+            <Cover cfg={cfg} cover={cover} />
+          </div>
+        </div>
+      </AbsoluteFill>
+    );
+  }
   if (format === 'cover-vertical' || format === 'cover-feed') {
     return (
       <AbsoluteFill style={{ backgroundColor: '#131419' }}>
-        <AbsoluteFill><Host cfg={cfg} frame={cover.frame} w={W} h={H} /></AbsoluteFill>
+        <AbsoluteFill><Host cfg={cfg} frame={cover.frame} w={W} h={H} cover={cover} /></AbsoluteFill>
         <AbsoluteFill style={{ background: 'linear-gradient(180deg, rgba(10,11,14,0) 50%, rgba(10,11,14,0.82) 70%, rgba(10,11,14,0.94) 100%)' }} />
         <div style={{ position: 'absolute', left: 80 * u, right: 80 * u, bottom: format === 'cover-vertical' ? 330 : 150 * u }}>
           <Title title={cover.title} accent={cover.accent} size={128 * u} />

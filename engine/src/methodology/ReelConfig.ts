@@ -1,4 +1,5 @@
 import type { DisplayFont } from '../components/vc/fonts';
+import brand from '../brand.json';
 /**
  * THE CONTRACT. Every short is one ReelConfig in src/methodology/reels/<name>.config.ts,
  * rendered by the one engine (VerticalReel.tsx). Nothing per video lives anywhere else.
@@ -12,6 +13,7 @@ import type { DisplayFont } from '../components/vc/fonts';
  * Python tools read it without executing TypeScript (trailing // comments are allowed).
  */
 import { GLIDE_F, SWAP_F, CANVAS, BREATH_F, completionTimes } from './layout';
+import { adSafeFaults } from './adsafe';
 
 export type Frame = number;
 export type Sec = number;
@@ -63,7 +65,7 @@ export const vignetteBg = (g?: Grade | null): string | undefined =>
 /** BACK TEXT: a word or two the host says, drawn huge between the room and the host (the host
  *  is matted out of the cut by scripts/matte_reel.py over these frames only), so it reads as
  *  standing behind them. Full-screen shots only. Words must be spoken (scene map check). */
-export type BackText = { text: string; in: Frame; out: Frame; glass?: boolean };   // glass: a frosted-glass word instead of the solid one
+export type BackText = { text: string; in: Frame; out: Frame; glass?: boolean; y?: number; x?: number };   // glass: a frosted-glass word instead of the solid one. y, x: the row's centre in canvas px, to set it behind the head wherever the head is in that shot (a paid ad holds it inside Meta's ad safe zone)
 /** INSERT: a floating UI card over a full-screen scene. 'follow' = the person's photo, name,
  *  handle and a Follow pill that flips to Following (identity from src/brand.json unless set here). */
 export type FollowInsert = { kind: 'follow'; in: Frame; out: Frame; handle?: string; name?: string; avatar?: string };
@@ -90,13 +92,14 @@ export type Effect =
   | (FxBase & { kind: 'list-tracker'; title: string; items: { t: string; at: Frame }[] })   // a header that steps through a list and stays up
   | (FxBase & { kind: 'snap-zoom'; at: Frame; scale?: number })                         // creep in, then snap tighter on the word at `at`
   | (FxBase & { kind: 'quote-card'; text: string; who?: string })                        // words someone said, typed on in quote marks
-  | (FxBase & { kind: 'pinned-line'; text: string })                                    // one short line pinned at the top (steps aside for other top-band effects)
+  | (FxBase & { kind: 'pinned-line'; text: string; y?: number; point?: 'down' })        // one short line pinned at the top (steps aside for other top-band effects); y: its centre, canvas px; point "down": a bouncing arrow instead of the dot
   | (FxBase & { kind: 'cover-story'; title: string; lines?: string[]; strap?: string })  // the frame as a magazine cover
   | (FxBase & { kind: 'highlighter'; src: string; w: number; h: number; source: string; mark: { x: number; y: number; w: number; h: number }; markAt?: number })
-  | (FxBase & { kind: 'note-wall'; notes: { t: string; at: Frame }[] })                 // paper notes stick up around the head, one per beat
-  | (FxBase & { kind: 'arrow-note'; text: string; x: number; y: number })               // a handwritten note with an arrow drawn to (x, y)
+  | (FxBase & { kind: 'note-wall'; notes: { t: string; at: Frame }[]; y?: number })     // paper notes stick up around the head, one per beat; y: the wall's centre, canvas px
+  | (FxBase & { kind: 'arrow-note'; text: string; x: number; y: number; noteY?: number }) // a handwritten note with an arrow drawn to (x, y); noteY: the note's centre, canvas px
   | (FxBase & { kind: 'comment-box'; keyword: string; lead?: string })                  // the keyword types into a comment field, a heart pops
   | (FxBase & { kind: 'giant-number'; value: string })                                  // a list number slammed in huge, in front of everything: covers the host for a split second on purpose
+  | (FxBase & { kind: 'lights-down'; depth?: number })                                  // the room behind the host dims and softens for one line, the host stays lit (cutout: scripts/matte_reel.py). depth 0.35-0.7 (default 0.6), how far the room dims
   | (FxBase & { kind: 'card'; layout: 'statement' | 'content'; label?: string; headline: string; sub?: string;
       items?: { t: string; at?: Frame }[]; list?: 'check' | 'number'; callout?: string; theme?: 'paper' | 'ink' })   // a full-frame slide (Slide.tsx), the host in a corner window
   | { kind: 'transition'; at: Frame; style: 'whip' | 'zoom' | 'spin' | 'iris' | 'bars' | 'flash' };
@@ -120,6 +123,9 @@ export const framingAt = (c: ReelConfig, frame: Frame): number => {
 };
 // the cutouts are named from the cut's stem, whichever copy the renderer draws (the cut, its color-graded copy, the hi twins)
 export const backFgSrc = (src: string, b: BackText) => `${src.replace(/-cut(-hi)?(-c)?\.mp4$/, '').replace(/\.mp4$/, '')}-fg-${b.in}-${b.out}.webm`;
+/** The lights-down cutout: its own file (an edge pulled in for a dark room), named under -fg- so the render staging copies it. */
+export const lightsFgSrc = (src: string, e: { in: Frame; out: Frame }) => `${src.replace(/-cut(-hi)?(-c)?\.mp4$/, '').replace(/\.mp4$/, '')}-fg-ld-${e.in}-${e.out}.webm`;
+export const LIGHTS_DEPTH = 0.6;   // the default dim (Chris picked the deeper look, 2026-11-09); validateReel holds depth to 0.35-0.7 (never to black: the cutout edge shows in a dark room)
 
 /** THUMBNAIL: an uploadable cover (companion format "thumbnail", 1080x1920). The host at
  *  `frame` is matted out (scripts/matte_reel.py), set lower, with `back` (2-5 spoken words)
@@ -128,8 +134,10 @@ export type Thumbnail = { frame: Frame; back: string; front?: string };
 export const thumbFgSrc = (src: string, frame: Frame) => `${src.replace(/-cut(-hi)?(-c)?\.mp4$/, '').replace(/\.mp4$/, '')}-thumb-${frame}.png`;
 
 /** The frame-0 cover: a chosen frame of the host plus a 2-4 word title. Instagram shows
- *  frame 0 as the default cover, so this replaces a mid-blink first frame. */
-export type Cover = { frame: Frame; title: string; accent?: string };
+ *  frame 0 as the default cover, so this replaces a mid-blink first frame. back: 1-4 spoken words drawn huge behind
+ *  the host (their one-frame cutout, scripts/matte_reel.py, thumbFgSrc), the title in front: regular posts only.
+ *  title "": the frame alone (a captions-only look has no title). scripts/cover_options.py writes the three options. */
+export type Cover = { frame: Frame; title: string; accent?: string; back?: string; backY?: number };   // backY: the top of the head in canvas px, where the words behind tuck in (cover_options.py measures it)
 
 export type Swap = {
   in: Frame;       // panel starts sliding in (card starts sliding off left)
@@ -190,7 +198,7 @@ export type ReelConfig = {
   effects?: Effect[];                 // motion graphics and transitions (Studio and Hype; Minimal keeps camera transitions only)                  // floating cards (follow card) over full-screen scenes, in the top band, never over back text
   thumbnail?: Thumbnail | null;        // custom cover: big spoken words BEHIND the host cutout, a short line in front               // big highlighted words BEHIND the host, full-screen shots only (cutouts: scripts/matte_reel.py)                // optional look on the HOST footage only (panels, captions, proof shots untouched)
   post?: { keyword: string; gets: string; link?: string };  // comment keyword, what the DM sends, link for no-DM platforms
-  placement?: 'organic' | 'paid';      // paid Meta ad: graphic CTA "Click Learn More", no comment keyword, ad copy instead of captions
+  placement?: 'organic' | 'paid';      // paid Meta ad: graphic CTA "Click Learn More", no comment keyword, ad copy instead of captions, every word inside Meta's ad safe zone (adsafe.ts)
   meta: { raw: string; script: string; cutWx: string; generated: string; look?: string };   // look: the style it was last built in (make_style.py)
 };
 
@@ -215,6 +223,36 @@ export const settledCues = (s: Swap, frames: number): number[] | null => {
 
 const fail = (id: string, msg: string): never => {
   throw new Error(`reel ${id}: ${msg}`);
+};
+
+/** Every file under public/ a reel's render can load, named by the same path helpers the components draw with
+ *  (backFgSrc, lightsFgSrc, thumbFgSrc, the config's own src fields). make_reel.sh stages exactly this list through
+ *  scripts/reel_files.mjs, so a new kind of file is added here once and the draft and the render both get it.
+ *  need: the picture is wrong without it (staging stops). hi: only the full-resolution render reads it. */
+export type ReelFile = { path: string; need: boolean; hi?: boolean };
+export const reelFiles = (c: ReelConfig): ReelFile[] => {
+  const files: ReelFile[] = [{ path: c.src, need: true }, { path: c.src.replace(/\.mp4$/, '.json'), need: false }];
+  if (/-cut\.mp4$/.test(c.src)) {
+    files.push({ path: c.src.replace(/-cut\.mp4$/, '-cut-hi.mp4'), need: false, hi: true });
+    if (c.color && c.color !== 'natural') {
+      files.push({ path: c.src.replace(/-cut\.mp4$/, '-cut-c.mp4'), need: false });
+      files.push({ path: c.src.replace(/-cut\.mp4$/, '-cut-hi-c.mp4'), need: false, hi: true });
+    }
+  }
+  if (!c.look?.backText?.over) for (const b of c.backText ?? []) files.push({ path: backFgSrc(c.src, b), need: true });
+  for (const e of c.effects ?? []) {
+    if (e.kind === 'lights-down') files.push({ path: lightsFgSrc(c.src, e), need: true });
+    if ('src' in e && typeof (e as { src?: unknown }).src === 'string') files.push({ path: (e as { src: string }).src, need: true });
+  }
+  if (c.cover?.back) files.push({ path: thumbFgSrc(c.src, c.cover.frame), need: true });
+  if (c.thumbnail) files.push({ path: thumbFgSrc(c.src, c.thumbnail.frame), need: true });
+  for (const s of c.swaps) if (s.content.kind === 'shot') files.push({ path: s.content.src, need: true });
+  for (const b of c.inserts ?? []) {
+    if (b.kind === 'clip') files.push({ path: b.src, need: true });
+    if (b.kind === 'follow' && (b.avatar ?? brand.avatar)) files.push({ path: (b.avatar ?? brand.avatar) as string, need: true });   // FollowCard's own fallback
+  }
+  const seen = new Set<string>();
+  return files.filter((f) => (seen.has(f.path) ? false : (seen.add(f.path), true)));
 };
 
 /** Structural validation. Throws with the reel id. Timeline-vs-speech law lives in reel_config.py. */
@@ -326,6 +364,8 @@ export const validateReel = (c: ReelConfig): void => {
     if (!b.text.trim() || b.text.length > 18 || b.text.trim().split(/\s+/).length > 3) fail(id, `backText ${i} is 1-3 words, <= 18 characters`);
     const prev = (c.backText ?? [])[i - 1];
     if (prev && b.in < prev.out) fail(id, `backText ${i} overlaps the one before it`);
+    if (b.y !== undefined && (b.y < 150 || b.y > 1600)) fail(id, `backText ${i}: y (the row's centre) must be 150-1600`);
+    if (b.x !== undefined && (b.x < 100 || b.x > 980)) fail(id, `backText ${i}: x (the row's centre) must be 100-980`);
   });
   if (c.framing && (c.framing.tight < 1.05 || c.framing.tight > 1.5)) fail(id, 'framing.tight must be 1.05-1.5');
   (c.needs ?? []).forEach((n, i) => {
@@ -353,10 +393,13 @@ export const validateReel = (c: ReelConfig): void => {
   ];
   (c.effects ?? []).forEach((e, i) => {
     const known = ['word-stamp', 'giant-captions', 'icon-strike', 'page-scroll', 'live-markup', 'keycaps', 'receipt', 'intertitle', 'counter', 'pie', 'card',
-      'list-tracker', 'snap-zoom', 'quote-card', 'pinned-line', 'cover-story', 'highlighter', 'note-wall', 'arrow-note', 'comment-box', 'giant-number', 'transition'];
+      'list-tracker', 'snap-zoom', 'quote-card', 'pinned-line', 'cover-story', 'highlighter', 'note-wall', 'arrow-note', 'comment-box', 'giant-number', 'lights-down', 'transition'];
     if (!known.includes(e.kind)) { fail(id, `effect ${i}: unknown kind ${e.kind}`); return; }
     if (e.kind === 'transition') {
       if (e.at <= 0 || e.at >= c.frames) fail(id, `effect ${i}: transition must sit inside the reel`);
+      // a camera move runs 6 frames each side of its join: two closer than 13 frames collide (stacked whips)
+      const near = (c.effects ?? []).find((o) => o !== e && o.kind === 'transition' && Math.abs(o.at - e.at) < 13);
+      if (near && near.kind === 'transition') fail(id, `effect ${i}: transitions at frames ${e.at} and ${near.at} are under 13 frames apart; keep one`);
       return;
     }
     const sc = [...c.scenes].reverse().find((s) => s.from <= e.in);
@@ -377,6 +420,9 @@ export const validateReel = (c: ReelConfig): void => {
     if (e.kind === 'snap-zoom' && (e.at <= e.in || e.at >= e.out || (e.scale ?? 1.15) < 1.05 || (e.scale ?? 1.15) > 1.3)) fail(id, `effect ${i}: snap-zoom snaps inside it, scale 1.05-1.3`);
     if (e.kind === 'quote-card' && (!e.text.trim() || e.text.length > 90)) fail(id, `effect ${i}: quote-card text is 1-90 characters`);
     if (e.kind === 'pinned-line' && (!e.text.trim() || e.text.length > 40)) fail(id, `effect ${i}: pinned-line is 1-40 characters`);
+    if (e.kind === 'pinned-line' && e.point !== undefined && e.point !== 'down') fail(id, `effect ${i}: pinned-line point is "down" or left out`);
+    if ((e.kind === 'pinned-line' || e.kind === 'note-wall') && e.y !== undefined && (e.y < 150 || e.y > 1600)) fail(id, `effect ${i}: ${e.kind} y (its centre) must be 150-1600`);
+    if (e.kind === 'arrow-note' && e.noteY !== undefined && (e.noteY < 150 || e.noteY > 1600)) fail(id, `effect ${i}: arrow-note noteY (the note's centre) must be 150-1600`);
     if (e.kind === 'cover-story' && (!e.title.trim() || e.title.length > 24 || (e.lines ?? []).length > 3)) fail(id, `effect ${i}: cover-story title 1-24 characters, up to 3 lines`);
     if (e.kind === 'highlighter' && !/^proof\/.+\.(png|jpe?g|webp)$/i.test(e.src)) fail(id, `effect ${i}: highlighter src must be a real capture under proof/`);
     if (e.kind === 'note-wall' && (e.notes.length < 1 || e.notes.length > 4 || e.notes.some((n) => n.t.length > 28 || n.at < e.in || n.at >= e.out))) fail(id, `effect ${i}: note-wall holds 1-4 notes of up to 28 characters, inside it`);
@@ -392,6 +438,25 @@ export const validateReel = (c: ReelConfig): void => {
       const held = [...(c.backText ?? []).map((b) => ({ ...b, what: 'back text ' + b.text })), ...(c.inserts ?? []).map((b) => ({ ...b, what: b.kind + ' card' }))]
         .find((b) => e.in < b.out && b.in < e.out);
       if (held) fail(id, `effect ${i}: giant-number overlaps ${held.what}: it fills the frame`);
+    }
+    if (e.kind === 'lights-down') {
+      // the room dims behind the host's cutout: one take, nothing else drawn from the cutout or over the whole frame, after the hook
+      if (e.out - e.in > 150) fail(id, `effect ${i}: lights-down holds 30-150 frames (one spoken line)`);
+      if (e.in < 45) fail(id, `effect ${i}: lights-down starts at frame 45 or later (the hook title lives in the first 45)`);
+      // it draws only on a settled full-screen shot: in cards and panels, the picture glides back from the card first
+      const scn = [...c.scenes].reverse().find((x) => x.from <= e.in), prevSc = scn && c.scenes[c.scenes.indexOf(scn) - 1];
+      if (scn && prevSc && prevSc.mode === 'window' && e.in < scn.from + GLIDE_F)
+        fail(id, `effect ${i}: lights-down starts while the picture is still gliding back to full screen (scene at frame ${scn.from}). Start it at frame ${scn.from + GLIDE_F} or later, where it shows`);
+      if (e.depth !== undefined && !(typeof e.depth === 'number' && Number.isFinite(e.depth) && e.depth >= 0.35 && e.depth <= 0.7)) fail(id, `effect ${i}: lights-down depth must be a number from 0.35 to 0.7`);
+      const join = (c.videoJoins ?? []).map((t) => Math.round(t * c.fps)).find((f) => f > e.in && f < e.out);
+      if (join !== undefined) fail(id, `effect ${i}: lights-down runs across the picture join at frame ${join}; keep it inside one take`);
+      const lights = (c.effects ?? []).filter((o) => o.kind === 'lights-down');
+      if (lights.length > 2) fail(id, 'at most two lights-down in a video');
+      const clash = (c.effects ?? []).find((o) => o !== e && (o.kind === 'transition' ? o.at > e.in && o.at < e.out
+        : (o.kind === 'lights-down' || o.kind === 'card' || o.kind === 'giant-number') && e.in < o.out && o.in < e.out));
+      if (clash) fail(id, `effect ${i}: lights-down overlaps ${clash.kind === 'transition' ? 'a transition at frame ' + clash.at : 'a ' + clash.kind}`);
+      const bt = (c.backText ?? []).find((b) => e.in < b.out && b.in < e.out);
+      if (bt) fail(id, `effect ${i}: lights-down overlaps ${bt.glass ? 'the glass word' : 'back text'} "${bt.text}"`);
     }
     if (e.kind === 'card') {
       if (e.out - e.in < 45 || e.out - e.in > 300) fail(id, `effect ${i}: a card holds 45-300 frames (1.5-10 s)`);
@@ -416,9 +481,16 @@ export const validateReel = (c: ReelConfig): void => {
   }
   if (c.cover) {
     const w = c.cover.title.trim().split(/\s+/);
-    if (w.length < 2 || w.length > 4 || c.cover.title.length > 28) fail(id, 'cover title must be 2-4 words, <= 28 characters');
+    const frameOnly = !c.cover.title.trim() && !c.cover.back && !c.cover.accent;   // the frame alone: a captions-only look
+    if (!frameOnly && (w.length < 2 || w.length > 4 || c.cover.title.length > 28)) fail(id, 'cover title must be 2-4 words, <= 28 characters');
     if (!Number.isInteger(c.cover.frame) || c.cover.frame < 0 || c.cover.frame >= c.frames) fail(id, 'cover frame outside the reel');
     if (c.cover.accent && !w.includes(c.cover.accent)) fail(id, 'cover accent must be one of the title words');
+    if (c.cover.back !== undefined) {
+      if (paid) fail(id, 'a paid ad cover is a frame and a title: no words behind the host on its cover');
+      const b = c.cover.back.trim().split(/\s+/);
+      if (!c.cover.back.trim() || b.length > 4 || c.cover.back.length > 28) fail(id, 'cover words behind the host are 1-4 words, <= 28 characters');
+      if (c.cover.backY !== undefined && (c.cover.backY < 150 || c.cover.backY > 1600)) fail(id, 'cover backY (the top of the head) must be 150-1600');
+    }
   }
   if (c.look) {
     const hex = (v: string | undefined, what: string) => { if (v !== undefined && v !== 'accent' && !/^#[0-9a-fA-F]{6}$/.test(v)) fail(id, `look ${what} must be #RRGGBB or "accent"`); };
@@ -428,6 +500,12 @@ export const validateReel = (c: ReelConfig): void => {
     if (L.y !== undefined && (L.y < 300 || L.y > 1460)) fail(id, 'look captions.y must be 300-1460 (inside the Reels safe zone)');
     if (L.weight !== undefined && (L.weight < 300 || L.weight > 900)) fail(id, 'look captions.weight must be 300-900');
     if (L.outline !== undefined && (L.outline < 0 || L.outline > 12)) fail(id, 'look captions.outline must be 0-12 px');
+  }
+  if (paid) {
+    // Meta lays its UI over the top 14%, the bottom 35% and the sides of a Reels ad: a paid reel draws every word inside
+    // x 60-1020, y 250-1250. adsafe.ts places them there; this checks the same boxes for what this reel draws.
+    const off = adSafeFaults(c);
+    if (off.length) fail(id, `paid ad: words outside Meta's ad safe zone (x 60-1020, y 250-1250): ${off.join('; ')}`);
   }
   if (CANVAS.w !== 1080 || CANVAS.h !== 1920) fail(id, 'engine canvas must be 1080x1920');
 };

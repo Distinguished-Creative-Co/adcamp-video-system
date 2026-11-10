@@ -15,4 +15,4 @@ Uses your brand fonts and color, so it already looks like yours. Make it yours: 
 - Punchy color, more contrast.
 
 ## Extras it reaches for
-- Giant Words on your strongest line, Snap Zoom, Word Stamp, Keycaps for your keyword, Icon Strike when you say no to something, Giant Number on the 1, 2, 3 of a list.
+- Giant Words on your strongest line, Snap Zoom, Lights Down on the one line that matters most, Giant Number on the 1, 2, 3 of a list, Icon Strike when you say no to something, Keycaps for your keyword.

@@ -33,7 +33,15 @@ import reel_config  # noqa: E402
 import styles_lib as L  # noqa: E402
 
 API = 'https://api.openverse.org/v1/audio/'
-UA = 'AdCamp-Video-System/2.0 (music by vibe; +https://github.com/Distinguished-Creative-Co/adcamp-video-system)'
+def _version():
+    """AVS's version from the install's VERSION file (one level above the engine), for the user agent."""
+    try:
+        return open(os.path.join(os.path.dirname(ROOT), 'VERSION')).read().strip() or '2.1'
+    except OSError:
+        return '2.1'
+
+
+UA = 'AdCamp-Video-System/%s (music by vibe; +https://github.com/Distinguished-Creative-Co/adcamp-video-system)' % _version()
 MUSIC = os.path.join(ROOT, 'sounds', 'music')
 CAND = os.path.join(MUSIC, 'candidates')
 CREDITS = os.path.join(MUSIC, 'credits.json')
@@ -222,4 +230,7 @@ def main():
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

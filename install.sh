@@ -39,6 +39,7 @@ while [ $# -gt 0 ]; do
     --step) STEP="$2"; shift 2;;
     --all) ALL=1; shift;;
     --list) sed -n '/^# Steps/,/^# Everything/p' "$0" | sed 's/^# \{0,1\}//'; exit 0;;
+    -h|--help) sed -n '2,/^[^#]/p' "$0" | sed -n 's/^# \{0,1\}//p'; exit 0;;   # --help: the usage, nothing else
     --accent) ACCENT="$2"; shift 2;;
     --sans) SANS="$2"; shift 2;;
     --serif) SERIF="$2"; shift 2;;
@@ -174,7 +175,7 @@ step_ytdlp(){
 }
 
 step_cutout(){
-  say "cutout: MediaPipe (cuts you out of the frame for the words-behind-you effect, Apache-2.0)"
+  say "cutout: MediaPipe (cuts you out of the frame for words behind you and Lights Down, Apache-2.0)"
   [ -x "$RT/matte/bin/python" ] || uv venv "$RT/matte" --python "$PY_VERSION" >/dev/null   # its own venv: it wants numpy 1.x
   uv pip install --python "$RT/matte/bin/python" "mediapipe==0.10.21"
   "$RT/matte/bin/python" -c "import mediapipe" || die "MediaPipe did not import"

@@ -3,6 +3,8 @@
 #
 #   scripts/make_reel.sh <raw.MOV|mp4> <name> [--face X,Y] [--regen] [--preview] [--unmirror]   builds everything, STOPS at the scene map
 #       [--keep-take N | --drop-take N | --trim A-B]   a different take, or a fumble cut out (raw seconds): forces a fresh cut
+#     --trim repeats, one per fumble. Picks and trims are saved (script/word-timings/<name>-takepicks.json, -trims.json),
+#       and a change to either file, by hand too, re-cuts on the next run
 #     --unmirror: flip iPhone front-camera footage saved mirrored (text on screen reads backwards)
 #     --reframe Z: crop to 1/Z from the full-res source, bottom-anchored (removes dead space above the subject)
 #     --paid: first generation makes a paid Meta ad config (Click Learn More, destination link, ad kit)
@@ -10,12 +12,14 @@
 #       pauses found from the gaps between words (last_take.py --word-gaps)
 #   scripts/make_reel.sh <raw.MOV|mp4> <name> --draft      a half-size review draft with sound, badged DRAFT, into out/drafts/
 #     (not the deliverable, so it needs no approval: the creator watches the edit in motion before approving)
+#     refuses while the config's frames do not match the cut (a re-cut keeps the old config: frozen tail or lost words)
 #   scripts/make_reel.sh <raw.MOV|mp4> <name> --render       renders ONLY with a current human approval
 #
 # Needs script/<name>.txt (blank-line paragraphs = spoken beats). Steps are skipped when
 # their output is newer than their inputs. The laws: the spoken script is the timeline;
 # cuts only between sentences, in silence; captions show the script on spoken timing; the
 # avatar is always on screen; render only after a human approved the scene map.
+case "${1:-}" in -h|--help) sed -n '2,/^[^#]/p' "$0" | sed -n 's/^# \{0,1\}//p'; exit 0;; esac   # --help: the usage, nothing else
 set -euo pipefail
 
 RAW="${1:?usage: make_reel.sh <raw> <name> [--face X,Y] [--regen] [--preview] [--render]}"
@@ -64,28 +68,73 @@ command -v ffmpeg >/dev/null || { echo "error: ffmpeg not on PATH"; exit 1; }
 
 # The files one reel's render reads, staged into a temp public dir ($PUB). "hi" adds the full-resolution
 # host twin (sharp zooms); a draft leaves it out, so it draws from the 1080 cut and renders faster.
-stage_public(){
-  CFGSRC=$(python3 -c "import sys; sys.path.insert(0,'scripts'); import reel_config; print(reel_config.load('$NAME')['src'])")
-  PUB="$(mktemp -d)"; mkdir -p "$PUB/host"; cp "public/$CFGSRC" "$PUB/host/"   # variants reuse another reel's cut
-  for fg in "public/${CFGSRC%-cut.mp4}"-fg-*.webm; do [ -f "$fg" ] && cp "$fg" "$PUB/host/"; done   # back-text cutouts
-  if [ "${1:-}" = hi ]; then HI="public/${CFGSRC%-cut.mp4}-cut-hi.mp4"; [ -f "$HI" ] && cp "$HI" "$PUB/host/"; fi   # full-resolution host for sharp zooms
-  for g in "public/${CFGSRC%-cut.mp4}-cut-c.mp4" "public/${CFGSRC%-cut.mp4}-cut-hi-c.mp4"; do   # the color look's graded picture
-    [ -f "$g" ] && { [ "${1:-}" = hi ] || [ "${g%-hi-c.mp4}" = "$g" ]; } && cp "$g" "$PUB/host/"
-  done
-  SIDE="public/${CFGSRC%.mp4}.json"; [ -f "$SIDE" ] && cp "$SIDE" "$PUB/host/"   # picture joins (J-cuts, second framing)
-  [ -d public/proof ] && cp -R public/proof "$PUB/proof"   # real screenshots for proof panels
-  [ -d public/inserts ] && cp -R public/inserts "$PUB/inserts"   # follow-card photo and cutaway clips
+stage_public(){   # exactly the files the render loads: reelFiles() in ReelConfig.ts, the list the components draw from
+  PUB="$(mktemp -d)"
+  FILES="$(node scripts/reel_files.mjs "$NAME")" || { rm -rf "$PUB"; echo "error: could not read the files ${NAME} uses (its config failed to load)"; exit 1; }
+  MISSING=""
+  while read -r kind rest; do
+    [ -n "$kind" ] || continue
+    f="$rest"; case "$rest" in "hi "*) f="${rest#hi }"; [ "${1:-}" = hi ] || continue;; esac   # full-resolution files: the real render only
+    if [ -f "public/$f" ]; then mkdir -p "$PUB/$(dirname "$f")"; cp "public/$f" "$PUB/$f"
+    elif [ "$kind" = need ]; then MISSING="$MISSING public/$f"; fi
+  done <<< "$FILES"
+  if [ -n "$MISSING" ]; then
+    rm -rf "$PUB"
+    echo "error: ${NAME} uses files that are not there:${MISSING}"
+    echo "  A cutout (-fg-, -thumb-) is made by: $MATTE_PY scripts/matte_reel.py ${NAME}. A screenshot or clip goes back under public/ with that name, or out of the config."
+    exit 1
+  fi
   return 0
+}
+
+# A render that could not load a file draws a hole or a broken image and still finishes, so its log is read:
+# any failed load of a file the reel needs stops the build. The optional files (the full-resolution and graded
+# copies, the sidecar) are looked for and may be missing, so those misses are fine.
+render_checked(){   # <log> <remotion render args...>
+  local log="$1"; shift
+  set +e
+  npx remotion render "$@" 2>&1 | tee "$log"; local rc=${PIPESTATUS[0]}
+  local fails maybe bad=""
+  fails="$(grep -E 'Failed to load resource|status of 404' "$log")"
+  maybe="$(printf '%s\n' "$FILES" | sed -nE 's/^maybe (hi )?//p')"
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    u="$(printf '%s' "$line" | grep -oE 'https?://[^] ]+' | head -1)"
+    case "$u" in *'/proxy?src='*) u="$(printf '%s' "$u" | sed -E 's#^.*/proxy[?]src=##; s#&.*$##; s#%3A#:#g; s#%2F#/#g')";; esac   # a video frame read through the renderer's proxy
+    u="$(printf '%s' "$u" | sed -E 's#^https?://[^/]+/(public/)?##; s#[?].*$##')"
+    if [ -z "$u" ]; then bad="$bad a file (see $log)"
+    elif ! printf '%s\n' "$maybe" | grep -qxF "$u"; then case " $bad " in *" $u "*) ;; *) bad="$bad $u";; esac; fi
+  done <<< "$fails"
+  if [ "$rc" -ne 0 ]; then   # the renderer stopped: name the reel's own file it choked on (a damaged cutout, a broken clip)
+    local f u
+    while read -r k f; do
+      [ "$k" = need ] || continue   # the optional copies are looked for and may be missing
+      grep -qF "$f" "$log" && grep -F "$f" "$log" | grep -qiE 'error|fail|could not|cannot|unable|decode|invalid' && { case " $bad " in *" $f "*) ;; *) bad="$bad $f";; esac; }
+    done <<< "$FILES"
+  fi
+  set -e
+  if [ -n "$bad" ]; then
+    rm -f "$3"; rm -rf "$PUB"
+    echo "error: the render of ${NAME} could not load:${bad} (missing or damaged). Its picture would show a hole or a broken image, so it stops here."
+    echo "  A cutout (-fg-, -thumb-): move it out of public/host (and its .src file beside it), then run the same command again, it is cut again. A screenshot or clip: put a good copy back under public/ with that name. Then render again."
+    exit 1
+  fi
+  if [ "$rc" -ne 0 ]; then
+    rm -f "$3"; rm -rf "$PUB"
+    echo "error: the render of ${NAME} stopped: $(grep -iE 'error' "$log" | grep -v '^ *at ' | tail -1 | cut -c1-200). The full log is $log."
+    exit "$rc"
+  fi
 }
 
 if [ "$DRAFT" -eq 1 ]; then
   # A review copy, not the deliverable: half size, same edit and sound, badged so nobody posts it.
   # It binds nothing and approves nothing; the real render still needs a current approval.
+  python3 -c "import sys; sys.path.insert(0,'scripts'); import reel_config, scene_map; c=reel_config.load('$NAME'); e=scene_map.cut_length_error('$NAME', c['frames'], scene_map.cut_frames(c)); sys.exit('error: no draft of ${NAME}. ' + e if e else 0)"   # the scene map's length check
   DD="out/drafts"; DRAFT_OUT="$DD/${NAME}-DRAFT.mp4"; mkdir -p "$DD" "qa/${NAME}"
   say "draft: the edit at half size with sound, to watch before approving -> $DRAFT_OUT"
   python3 scripts/color_lut.py "$NAME"; "$MATTE_PY" scripts/matte_reel.py "$NAME"
   stage_public
-  npx remotion render src/methodology/index.ts "$NAME" "$DD/${NAME}-picture.mp4" --muted --scale=0.5 --crf=28 --public-dir="$PUB" --timeout=180000
+  render_checked "qa/${NAME}/draft-render.log" src/methodology/index.ts "$NAME" "$DD/${NAME}-picture.mp4" --muted --scale=0.5 --crf=28 --public-dir="$PUB" --timeout=180000
   rm -rf "$PUB"
   MIX_QA_SUB=draft python3 scripts/mix_master.py "$NAME" "$DD/${NAME}-picture.mp4" "$DD/${NAME}-mix.mp4"   # records go to qa/<name>/draft, the render's stay
   "$MATTE_PY" scripts/draft_badge.py "$DD/${NAME}-badge.png" 540
@@ -107,7 +156,7 @@ if [ "$RENDER" -eq 1 ]; then
   say "6/7  render ($ENGINE) -> $OUT"
   python3 scripts/color_lut.py "$NAME"; "$MATTE_PY" scripts/matte_reel.py "$NAME"   # back-text cutouts (reused when the cut is unchanged)
     stage_public hi
-    npx remotion render src/methodology/index.ts "$NAME" "out/${NAME}-picture.mp4" --muted --crf=18 --public-dir="$PUB" --timeout=180000
+    render_checked "qa/${NAME}/render.log" src/methodology/index.ts "$NAME" "out/${NAME}-picture.mp4" --muted --crf=18 --public-dir="$PUB" --timeout=180000
     rm -rf "$PUB"
   say "     mix + master: narration from the cut, your sounds.json effects, -14 LUFS, true peak <= -1 dBTP"
   python3 scripts/mix_master.py "$NAME" "out/${NAME}-picture.mp4" "$OUT"
@@ -134,6 +183,10 @@ fi
 
 # a DIFFERENT raw can be older than the cached input (camera clips keep their shoot date), so
 # freshness alone is not enough: the input remembers which raw it came from
+# the video given must be the recording, never AVS's own normalized copy of it: the checks below would delete that copy
+if [ -f "$SRC" ] && [ "$(cd "$(dirname "$RAW")" && pwd -P)/$(basename "$RAW")" = "$(cd "$(dirname "$SRC")" && pwd -P)/$(basename "$SRC")" ]; then
+  echo "error: ${SRC} is AVS's own copy of the video, not the recording. Give the original video (the one in the inbox, or inbox/done/${NAME}/). Nothing was changed."; exit 1
+fi
 STAMP="inputs/${NAME}.source"
 RAWID="$(cd "$(dirname "$RAW")" && pwd)/$(basename "$RAW")|$(stat -f %z "$RAW")"
 OLDID="$(cat "$STAMP" 2>/dev/null || true)"   # same file name and size = the same raw, even moved (inbox -> inbox/done)
@@ -150,8 +203,13 @@ fi
 [ -f "$SRC" ] && [ ! -f "$STAMP" ] && echo "$RAWID" > "$STAMP"   # reels built before the stamp adopt their raw
 newer "$SRC" "$RAW" || { say "0/5  normalize -> $SRC (1080x1920, 30 fps CFR, one AAC track)"; python3 scripts/normalize_source.py "$RAW" "$SRC" $UNMIRROR $REFRAME && echo "$RAWID" > "$STAMP"; }
 if [ -n "$OUTDOOR" ]; then FASTFLAG=""; else FASTFLAG="--fast"; fi   # outdoor needs precise word edges on the raw
-newer "$WX" "$SRC" || { say "1/5  transcribe ${FASTFLAG:-(precise, outdoor)}"; "$WHISPERX" scripts/word_align_x.py "$SRC" $FASTFLAG; }
-if [ -n "$TAKES" ] || ! newer "$CUT" "$WX" || ! newer "$CUT" "script/${NAME}.txt"; then
+PRECISE="script/word-timings/${NAME}-wx.precise"   # marks a transcript made by the precise (outdoor) pass
+if [ -n "$OUTDOOR" ] && [ -f "$WX" ] && [ ! -f "$PRECISE" ]; then   # --outdoor after a quick transcript: the precise pass has to run
+  say "--outdoor: the transcript on disk is the quick one, making the precise one"; rm -f "$WX"
+fi
+newer "$WX" "$SRC" || { say "1/5  transcribe ${FASTFLAG:-(precise, outdoor)}"; rm -f "$PRECISE"; "$WHISPERX" scripts/word_align_x.py "$SRC" $FASTFLAG && { [ -n "$FASTFLAG" ] || touch "$PRECISE"; }; }
+TRIMS="script/word-timings/${NAME}-trims.json"; PICKS="script/word-timings/${NAME}-takepicks.json"   # newer() is true while one is absent
+if [ -n "$TAKES" ] || ! newer "$CUT" "$WX" || ! newer "$CUT" "script/${NAME}.txt" || ! newer "$CUT" "$TRIMS" || ! newer "$CUT" "$PICKS"; then
   say "2/5  last take: keep the last clean take of each sentence, cut in silence -> $CUT"
   python3 scripts/last_take.py "$SRC" --words "$WX" --script "script/${NAME}.txt" --out "$CUT" \
     --report "script/${NAME}-takes.md" --json "script/word-timings/${NAME}-takes.json" $OUTDOOR $TAKES

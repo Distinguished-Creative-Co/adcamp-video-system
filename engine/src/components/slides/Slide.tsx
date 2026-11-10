@@ -42,7 +42,8 @@ export const Slide: React.FC<{
   t?: number;            // frames since a reel card entered (animates the parts in); undefined = a still, everything shown
   page?: [number, number];
   safeBottom?: number;   // reel cards: keep words above this y (the host's corner window and the app's buttons)
-}> = ({ data, look, who, w, h, t, page, safeBottom }) => {
+  safeTop?: number;      // reel cards: keep words below this y (a paid ad: Meta's top bar), default 240
+}> = ({ data, look, who, w, h, t, page, safeBottom, safeTop }) => {
   const photo = !!data.photo;
   const theme: SlideTheme = photo ? 'ink' : look?.theme ?? 'paper';
   const P = PAL[theme];
@@ -121,7 +122,7 @@ export const Slide: React.FC<{
       ) : null}
       <div style={{ position: 'absolute', left: pad, right: pad, display: 'flex', flexDirection: 'column',
         ...(photo ? { bottom: h - bottom + 40 * k }
-          : data.layout === 'statement' || data.layout === 'hook' || card ? { top: card ? 240 : 0, bottom: h - bottom, justifyContent: 'center' }
+          : data.layout === 'statement' || data.layout === 'hook' || card ? { top: card ? safeTop ?? 240 : 0, bottom: h - bottom, justifyContent: 'center' }
           : { top: 150 * k }) }}>
         {label}{headline}{sub}{list}{callout}{pill}
       </div>

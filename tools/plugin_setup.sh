@@ -6,6 +6,7 @@
 # inside it. ~/AVS is where reels, footage, the brand and the downloaded tools live. This copies the
 # engine and the installer there (no download) and marks the install as plugin-managed, so the skill
 # comes from the plugin instead of ~/.claude/skills. Then INSTALL.md takes over.
+case "${1:-}" in -h|--help) sed -n '2,/^[^#]/p' "$0" | sed -n 's/^# \{0,1\}//p'; exit 0;; esac   # --help: the usage, nothing else
 set -euo pipefail
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 DST="$HOME/AVS"

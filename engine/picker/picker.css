@@ -40,3 +40,6 @@
 .err { color: #FF8A7A; font-weight: 700; }
 @media (max-width: 520px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .name { font-size: 17px; } }
 @media (prefers-reduced-motion: reduce) { .pcard { transition: none; } }
+/* effects in groups (start page and Picker): a heading and, for two of them, one short line on what they need */
+.fxgroup { display: grid; gap: 8px; margin-top: 10px; }
+.fxnote { margin: -4px 0 4px; color: var(--t-sub); font-size: 14px; max-width: 70ch; }

@@ -15,11 +15,15 @@ export const AvatarView: React.FC<{
   src: string; view: View; zoom: number; glass: number;
   faceX: number; faceY: number; sW: number; sH: number;
   dx?: number; dy?: number; grade?: Grade | null;
-  back?: { text: string; from: number; lf: number; len: number; fg: string; look?: React.ComponentProps<typeof BackTextLayer>['look'] };   // back text + host cutout (+ a style's type)
-}> = ({ src, view, zoom, glass, faceX, faceY, sW, sH, dx = 0, dy = 0, grade, back }) => {
+  back?: { text: string; from: number; lf: number; len: number; fg: string; look?: React.ComponentProps<typeof BackTextLayer>['look']; paid?: boolean; y?: number; x?: number };   // back text + host cutout (+ a style's type; its own place; paid: inside the ad safe zone)
+  lights?: { k: number; depth: number; fg: string; from: number; len: number };   // lights-down: the footage dims by depth * k (0-1), the host's cutout stays at full light
+}> = ({ src, view, zoom, glass, faceX, faceY, sW, sH, dx = 0, dy = 0, grade, back, lights }) => {
   const p = place(view, zoom, faceX, faceY, sW, sH);
   const gr = useGrade(grade);
   const on = glass > 0.02;
+  // the room goes down: darker, a touch softer and less colorful, never to black (the cutout's edge would show)
+  const dim = lights ? lights.depth * lights.k : 0;
+  const footFilter = dim > 0 ? [gr.filter, `brightness(${(1 - dim).toFixed(4)}) saturate(${(1 - 0.5 * dim).toFixed(4)}) blur(${(5 * dim).toFixed(2)}px)`].filter(Boolean).join(' ') : gr.filter;
   return (
     <div
       style={{
@@ -30,17 +34,24 @@ export const AvatarView: React.FC<{
       }}
     >
       <div style={{ position: 'absolute', left: p.left, top: p.top, width: p.width, height: p.height }}>
-        <OffthreadVideo muted src={staticFile(src)} style={{ width: '100%', height: '100%', objectFit: 'fill', filter: gr.filter }} />
+        <OffthreadVideo muted src={staticFile(src)} style={{ width: '100%', height: '100%', objectFit: 'fill', filter: footFilter }} />
       </div>
       {back ? (
         <>
-          <BackTextLayer text={back.text} lf={back.lf} len={back.len} w={view.w} h={view.h} look={back.look} />
+          <BackTextLayer text={back.text} lf={back.lf} len={back.len} w={view.w} h={view.h} look={back.look} paid={back.paid} y={back.y} x={back.x} />
           <Sequence from={back.from} durationInFrames={back.len} layout="none">
             <div style={{ position: 'absolute', left: p.left, top: p.top, width: p.width, height: p.height }}>
               <OffthreadVideo muted transparent src={staticFile(back.fg)} style={{ width: '100%', height: '100%', objectFit: 'fill', filter: gr.filter }} />
             </div>
           </Sequence>
         </>
+      ) : null}
+      {lights ? (
+        <Sequence from={lights.from} durationInFrames={lights.len} layout="none">
+          <div style={{ position: 'absolute', left: p.left, top: p.top, width: p.width, height: p.height }}>
+            <OffthreadVideo muted transparent src={staticFile(lights.fg)} style={{ width: '100%', height: '100%', objectFit: 'fill', filter: gr.filter }} />
+          </div>
+        </Sequence>
       ) : null}
       {gr.defs}
       {gr.vignette}

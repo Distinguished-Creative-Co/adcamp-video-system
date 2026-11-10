@@ -68,10 +68,8 @@ def build(base, st, vid):
 
 def start_picks(name):
     """What the member picked on the start page for this video (qa/<name>/start.json), or {} for an older video."""
-    try:
-        return json.load(open(os.path.join(ROOT, 'qa', name, 'start.json')))
-    except (OSError, ValueError):
-        return {}
+    import start_page   # retired effects never come back, and only-retired picks become the look's own first effects (apply says so)
+    return start_page.stored_picks(os.path.join(ROOT, 'qa', name, 'start.json'))[0]
 
 
 def strip_look(s, bc, st, styled, picked=()):
@@ -121,7 +119,7 @@ def fx_name(kind):
         cat = json.load(open(os.path.join(ROOT, 'picker', 'catalog.json')))
         return next(e['name'] for e in cat['effects'] if e['key'] == kind)
     except (OSError, ValueError, StopIteration, KeyError):
-        return kind.replace('-', ' ')
+        return styles_lib.RETIRED_EFFECTS.get(kind) or kind.replace('-', ' ')
 
 
 def main():
@@ -201,6 +199,9 @@ def main():
             picks['captionStyle'] = st['captionStyle']
             json.dump(picks, open(os.path.join(ROOT, 'qa', base, 'start.json'), 'w'), indent=1)
         subprocess.run([sys.executable, os.path.join(HERE, 'start_page.py'), 'apply', base], check=True)
+    import cover_options   # the three covers follow the reel into its new look (or the new version gets its own), or are left out
+    if os.path.exists(cover_options.record_path(base)):
+        cover_options.carry(vid, None if in_place else base)
     print('make_style: wrote %s in %s%s. Next: matte_reel.py, scene_map.py, test_layout.mjs, extract_reel_stills.py --preview, then approval.'
           % (os.path.relpath(out, ROOT), st['name'], '' if in_place else ' and registered it'))
 
@@ -222,7 +223,10 @@ def reshape(s, style):
         keep = [json.loads(x) for x in cfg_fx if re.search(r'"style": "(whip|zoom|spin|flash)"', x)]
         s = L.remove_key(s, 'effects')
         s = L.add_effects(s, keep, 'minimal style: camera transitions only')
-        s = L.set_key(s, 'cover', None, 'minimal style: no overlays outside captions')
+        cv = re.search(r'^  "cover": (\{[^\n]*?\}),', s, re.M)
+        frame = json.loads(cv.group(1)).get('frame') if cv else None
+        s = (L.set_key(s, 'cover', {'frame': frame, 'title': ''}, 'minimal style: the cover frame alone, no title') if isinstance(frame, int)
+             else L.set_key(s, 'cover', None, 'minimal style: no overlays outside captions'))
         cap = '  "captionStyle": "punch",  // minimal style\n'
     else:
         cap = ('  "captionStyle": "dynamic",  // hype style: two-font stacked captions in the brand fonts\n'
@@ -230,4 +234,7 @@ def reshape(s, style):
     return s.replace('  "placement":', cap + '  "placement":', 1)
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

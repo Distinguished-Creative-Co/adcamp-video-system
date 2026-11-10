@@ -36,8 +36,14 @@ def main():
         sys.exit('prep_insert: no such file: %s' % src)
     out = os.path.join(ROOT, 'public', 'inserts', '%s.mp4' % name)
     os.makedirs(os.path.dirname(out), exist_ok=True)
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import normalize_source   # an iPhone HDR clip is tone-mapped the same way as the main video
+    try:
+        trc = next(x.get('color_transfer') for x in normalize_source.probe(src)['streams'] if x.get('codec_type') == 'video')
+    except (subprocess.CalledProcessError, StopIteration, ValueError, KeyError):
+        trc = None
     cmd = ['ffmpeg', '-y', '-loglevel', 'error', '-ss', '%.3f' % start, '-t', '%.3f' % length, '-i', src, '-an',
-           '-vf', 'scale=%d:%d:force_original_aspect_ratio=increase:flags=lanczos,crop=%d:%d' % (W, H, W, H),
+           '-vf', normalize_source.tonemap_vf(trc) + 'scale=%d:%d:force_original_aspect_ratio=increase:flags=lanczos,crop=%d:%d' % (W, H, W, H),
            '-r', str(FPS), '-fps_mode', 'cfr', '-c:v', 'libx264', '-crf', '20', '-preset', 'medium', '-pix_fmt', 'yuv420p',
            '-movflags', '+faststart', out]
     subprocess.run(cmd, check=True)
@@ -48,4 +54,7 @@ def main():
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

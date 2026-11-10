@@ -41,7 +41,9 @@
  ],
  "effects_allowed": [
   "card",
-  "word-stamp",
+  "snap-zoom",
+  "lights-down",
+  "pinned-line",
   "list-tracker",
   "highlighter",
   "page-scroll"

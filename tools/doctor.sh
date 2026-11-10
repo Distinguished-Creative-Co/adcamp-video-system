@@ -1,6 +1,7 @@
 #!/bin/bash
 # AdCamp Video System checkup: what is installed, what is missing. Changes nothing.
 #   ~/AVS/tools/doctor.sh
+case "${1:-}" in -h|--help) sed -n '2,/^[^#]/p' "$0" | sed -n 's/^# \{0,1\}//p'; exit 0;; esac   # --help: the usage, nothing else
 RE="$(cd "$(dirname "$0")/.." && pwd)"
 RT="$RE/runtime"
 D="${RE/#$HOME/~}"   # how the folder is shown: ~/AVS

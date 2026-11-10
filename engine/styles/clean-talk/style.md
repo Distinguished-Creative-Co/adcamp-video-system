@@ -17,4 +17,5 @@ Uses your brand fonts and color, so it already looks like yours. Make it yours: 
 - Bright and natural, a touch of contrast.
 
 ## Extras it reaches for
-- A clean content card when a part of your video is a list, Word Stamp on one big word, List Tracker for numbered points, Highlighter or Page Scroll when you send a screenshot.
+- Snap Zoom on your most important word, Lights Down on the one line that matters most, Pinned Line for your keyword.
+- A clean content card when a part of your video is a list, List Tracker for numbered points, Highlighter or Page Scroll when you send a screenshot.

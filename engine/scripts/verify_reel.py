@@ -12,6 +12,9 @@ MEASURED on the render, against the cut footage (ffmpeg sampling, grayscale):
   safe       in settled window/swap frames nothing bright sits under the IG UI strips
   motion     no frozen stretch: frames 0.5s apart always differ
 
+A lights-down effect dims the room on purpose: its frames are exempt from the comparisons that read
+levels against the source, and the output says so.
+
 Presence frame by frame and footage-edge math are proven on the state machine by
 scripts/test_layout.mjs. The gates are not the edit: the stills are.
 """
@@ -136,11 +139,19 @@ def main():
         fails.append('open: the first frame of the open is not punched in')
     if cfg.get('cover'):
         c = cfg['cover']
-        d_cov = diff(grab(out, 0.0, (0, 0, 1080, 1100), (108, 110)), grab(src, c['frame'] / 30.0, (0, 0, 1080, 1100), (108, 110)))
+        ch = 700 if cfg.get('placement') == 'paid' else 1100   # above the title's dark fade (Cover.tsx: paid 38%, organic 52%)
+        y0 = max(0, min(ch - 200, int(cfg['faceY']) - 60)) if c.get('back') else 0   # words behind the head: compare below them
+        y0 -= y0 % 10
+        d_cov = diff(grab(out, 0.0, (0, y0, 1080, ch - y0), (108, (ch - y0) // 10)), grab(src, c['frame'] / 30.0, (0, y0, 1080, ch - y0), (108, (ch - y0) // 10)))
         notes.append('cover: frame 0 vs source frame %d diff %.1f' % (c['frame'], d_cov))
         if d_cov > 12:
             fails.append('cover: frame 0 does not show source frame %d (diff %.1f)' % (c['frame'], d_cov))
-    if d_set > 12:
+    lights = [(e['in'], e['out']) for e in cfg.get('effects') or [] if e.get('kind') == 'lights-down']
+    if lights:
+        notes.append('lights-down: frames %s dim the room on purpose, exempt from the level checks' % ', '.join('%d-%d' % x for x in lights))
+    if d_set > 12 and any(a <= round(t_set * 30) < b for a, b in lights):
+        notes.append('open: settled check skipped, frame %d is inside a lights-down' % round(t_set * 30))
+    elif d_set > 12:
         fails.append('open: not settled to 1.0 after %d frames (diff %.1f)' % (cfg['open']['frames'], d_set))
 
     # card at rest in each window scene, outside swaps
@@ -264,4 +275,7 @@ def main():
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

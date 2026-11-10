@@ -3,18 +3,21 @@ import { GOLD, ACCENT_ON_FOOTAGE, moneyColor } from '../vc/style';
 import { accentFace, SANS, type AccentFont } from '../vc/fonts';
 import type { Line } from '../../methodology/timeline';
 import { LEAD_F } from '../../methodology/layout';
+import { adCapScale, capTop } from '../../methodology/adsafe';
 
 /**
  * DYNAMIC captions (captionStyle "dynamic"): the current line, rebuilt as a stacked block.
  * The line's key word (its `big` word) gets its own row in the italic accent serif, large and
  * yellow; the rest are white caps in the house sans, smaller. Each word pops on as it is
  * spoken (the layout is reserved up front, so nothing jumps). Rows shrink to fit 840px.
+ * A paid ad centers the block on the look's caption height (look.captions.y) and keeps it inside Meta's ad safe zone,
+ * no taller than 300 px (a three-row line draws a little smaller).
  */
 const W = 840, CY = 1290, BOTTOM = 1580;   // 120-960: clear of the right-side Reels buttons
 const chunk = <T,>(a: T[], n: number) => { const o: T[][] = []; for (let i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; };
 const backOut = (p: number) => { const c = 1.7; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
 
-export const DynamicCaptions: React.FC<{ line?: Line; now: number; fps: number; accent?: AccentFont; opacity: number; plain?: boolean; money?: string }> = ({ line, now, fps, accent, opacity, plain = false, money }) => {
+export const DynamicCaptions: React.FC<{ line?: Line; now: number; fps: number; accent?: AccentFont; opacity: number; plain?: boolean; money?: string; paid?: boolean; cy?: number }> = ({ line, now, fps, accent, opacity, plain = false, money, paid = false, cy }) => {
   if (!line) return null;
   const face = accentFace(accent);
   const words = line.words.filter((w) => w.t);
@@ -34,11 +37,12 @@ export const DynamicCaptions: React.FC<{ line?: Line; now: number; fps: number; 
   });
   const lh = (r: (typeof sized)[number]) => r.size * (r.accent ? 0.95 : 1.02);
   const H = sized.reduce((n, r) => n + lh(r), 0);
-  const top = Math.min(CY - H / 2, BOTTOM - H);
+  const k = adCapScale(H, paid);
+  const top = capTop(paid ? cy ?? CY : CY, H * k, BOTTOM, paid);
   const enter = Math.min(1, Math.max(0, (now - line.s + 0.12) * fps / 6));
   return (
     <div style={{ position: 'absolute', left: (1080 - W) / 2, width: W, top, opacity: opacity * Math.min(1, enter * 1.5),
-      transform: `translateY(${(1 - enter) * 18}px)` }}>
+      transform: `translateY(${(1 - enter) * 18}px)${k < 1 ? ` scale(${k})` : ''}`, transformOrigin: k < 1 ? '50% 0' : undefined }}>
       {sized.map((r, i) => (
         <div key={i} style={{ height: lh(r), display: 'flex', justifyContent: 'center', alignItems: 'center', gap: r.size * 0.24, whiteSpace: 'nowrap' }}>
           {r.ws.map((w, j) => {

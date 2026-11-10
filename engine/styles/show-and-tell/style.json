@@ -33,13 +33,13 @@
  "effects_allowed": [
   "list-tracker",
   "counter",
+  "pinned-line",
   "pie",
   "receipt",
   "card",
   "page-scroll",
   "live-markup",
   "highlighter",
-  "pinned-line",
   "comment-box"
  ],
  "hook_title": true

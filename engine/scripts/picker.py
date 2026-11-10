@@ -43,6 +43,7 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 import adcamp_page  # noqa: E402
 import styles_lib as L  # noqa: E402
+from start_page import effect_groups  # noqa: E402
 
 PAGE = os.path.join(ROOT, 'picker')
 PICKS = os.path.join(ROOT, 'styles', 'picks.json')
@@ -71,8 +72,10 @@ def state():
         brand = json.load(open(os.path.join(ROOT, 'src', 'brand.json')))
     except (OSError, ValueError):
         pass
-    picks = json.load(open(PICKS)) if os.path.exists(PICKS) else None
-    return {'catalog': cat, 'mine': mine, 'default': L.default_slug(), 'accent': brand.get('accent', '#F7C715'), 'picks': picks,
+    picks = L.read_picks(PICKS)[0] or None if os.path.exists(PICKS) else None   # a 2.0.0 pick can name a retired effect: never on the page
+    if picks and isinstance(picks.get('parts'), dict):
+        picks['parts'] = {k: v for k, v in picks['parts'].items() if k not in L.RETIRED_EFFECTS} or None
+    return {'catalog': cat, 'groups': effect_groups(cat), 'mine': mine, 'default': L.default_slug(), 'accent': brand.get('accent', '#F7C715'), 'picks': picks,
             'fonts': {'sans': brand.get('sans'), 'serif': brand.get('serif')}}
 
 
@@ -98,7 +101,8 @@ def clean(p):
         if p.get('captionStyle') not in keys['captions']:
             raise ValueError('pick a caption style')
         out['captionStyle'] = p['captionStyle']
-        out['effects'] = [k for k in p.get('effects') or [] if k in keys['effects']]
+        # a retired effect (Word Stamp, Cover Story) stays in the pick, so my_styles.py names it and refuses a mix of only those
+        out['effects'] = [k for k in p.get('effects') or [] if k in keys['effects'] or k in L.RETIRED_EFFECTS]
         out['transitions'] = [k for k in p.get('transitions') or [] if k in keys['transitions']]
         parts = p.get('parts')
         if isinstance(parts, dict):
@@ -297,4 +301,7 @@ def main():
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

@@ -35,6 +35,8 @@ def span_of(e):
 
 def patched(text, cfg, opt, a, b):
     """The reel's config text with the beat's effects, back text and inserts replaced by the option's."""
+    if '\n  "placement":' not in text and '\n  "meta":' in text:   # a reel from before placement existed: organic, said out loud
+        text = text.replace('\n  "meta":', '\n  "placement": "organic",\n  "meta":', 1)
     for key in LISTS:
         keep = [e for e in cfg.get(key) or [] if not (span_of(e)[0] < b and a < span_of(e)[1])]
         new = keep + list(opt.get(key) or [])
@@ -111,14 +113,15 @@ def main():
     register(ids)
     os.makedirs(os.path.join(ROOT, 'out', 'drafts'), exist_ok=True)
     os.makedirs(os.path.dirname(rec), exist_ok=True)
-    matte = os.environ['AVS_MATTE_PYTHON']   # runtime/env.sh sets it
+    matte = os.environ.get('AVS_MATTE_PYTHON', '')   # runtime/env.sh sets it (read lazily, so --help works without it)
     f0, f1 = max(0, A - 15), min(cfg['frames'] - 1, B + 15)
     try:
         for rid, o in zip(ids, opts):
             ok, msg = reel_config.ts_validate(rid)
-            if not ok:
-                sys.exit('beat_options: version "%s" does not validate:\n%s' % (o['label'], msg))
-            if o.get('backText'):
+            joins = [e for e in reel_config.timeline_errors(reel_config.load(rid)) if e.startswith('lights-down')]
+            if not ok or joins:
+                sys.exit('beat_options: version "%s" does not validate:\n%s' % (o['label'], msg if not ok else '\n'.join(joins)))
+            if o.get('backText') or any(e.get('kind') == 'lights-down' for e in o.get('effects') or []):   # both draw the person's cutout
                 subprocess.run([matte, os.path.join(HERE, 'matte_reel.py'), rid], check=True, capture_output=True)
             pic = os.path.join(ROOT, 'out', 'drafts', rid + '-picture.mp4')
             p = subprocess.run(['npx', 'remotion', 'render', 'src/methodology/index.ts', rid, pic, '--frames=%d-%d' % (f0, f1),
@@ -146,4 +149,7 @@ def main():
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

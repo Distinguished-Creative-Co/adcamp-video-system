@@ -14,7 +14,7 @@ then run it. They may not be technical. Never use sudo. Nothing here needs a pas
   (about 50 MB). Otherwise the folder came from a zip and may have landed somewhere else: Safari expands the
   zip into `~/Downloads/AVS` on its own, or the person may have unzipped it on the Desktop. If
   `runtime/` does not exist yet, move that folder to `~/AVS` (`mv ~/Downloads/AVS ~/AVS`) rather
-  than unzipping a second copy. If only the zip exists: `ditto -x -k ~/Downloads/AVS-2.0.0.zip ~`
+  than unzipping a second copy. If only the zip exists: `ditto -x -k ~/Downloads/AVS-2.1.0.zip ~`
   (it creates `~/AVS`). A Google Drive download may show a "can't scan for viruses" page first:
   that is normal for a 50 MB file, click Download anyway.
 - Tell the person: "Welcome to AVS. Setup takes up to an hour, mostly downloads and a test video. I'll ask you a
@@ -102,8 +102,8 @@ sentence what happened and what you're doing about it.
 
 Follow "Their look" and "Pages beside the chat" in the AVS skill (if it isn't loaded in this chat, read
 `~/AVS/skills/avs/SKILL.md`). In short:
-- `python3 scripts/style_board.py`, publish `qa/style-board/pane.html` beside the chat (capabilities `{"comments": {"composer_only": true}}`, icon "palette";
-  in a terminal without the pane, `open qa/style-board/index.html`), and say the look line.
+- `python3 scripts/style_board.py`, publish `qa/style-board/pane.html` beside the chat (capabilities `{"comments": {"composer_only": true}}`, icon "palette".
+  In a terminal without the pane: `open qa/style-board/index.html`), and say the look line.
 - A look they name becomes the default (`my_styles.py default <slug>`). A comment on the board (a tweak, a color, the
   type) changes it, and the board is rebuilt and republished until they say it's right.
 - The Picker or links to reels they love: "The Picker" and "Styles from reels they like" in the skill. Saved, either

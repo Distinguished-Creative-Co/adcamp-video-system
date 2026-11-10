@@ -34,6 +34,59 @@ BASES = ('studio', 'minimal', 'hype')
 TRANSITIONS = ('flash', 'whip', 'zoom', 'spin', 'iris', 'bars')
 CAPTION_STYLES = ('lines', 'punch', 'dynamic', 'word', 'bigword', 'pill', 'editorial', 'steps')
 FPS = 30
+RETIRED_EFFECTS = {'word-stamp': 'Word Stamp', 'cover-story': 'Cover Story'}   # off the pages since 2.1.0, still drawn in older videos
+
+
+def without_retired(picks):
+    """A stored pick list (qa/<name>/start.json, the start page's last save, a Picker save) with the retired effects
+    taken out of its effect lists. Returns (picks, the retired ones' names as the member saw them). Every reader of a
+    stored pick list goes through this, so a video begun on 2.0.0 never places one again."""
+    picks = dict(picks or {})
+    gone = []
+    for key in ('effects', 'ticked'):
+        if isinstance(picks.get(key), list):
+            gone += [k for k in picks[key] if k in RETIRED_EFFECTS and k not in gone]
+            picks[key] = [k for k in picks[key] if k not in RETIRED_EFFECTS]
+    return picks, [RETIRED_EFFECTS[k] for k in gone]
+
+
+def read_picks(path):
+    """without_retired() of the JSON at path, or ({}, []) when there is none."""
+    try:
+        return without_retired(json.load(open(path)))
+    except (OSError, ValueError):
+        return {}, []
+
+
+def scrub_retired_md(text):
+    """A style.md without the retired effects: in a list line ("Giant Words, Snap Zoom, Word Stamp, Keycaps") the item
+    that starts with the name goes, and a line that names one inside a sentence goes whole. Returns (text, names)."""
+    names = list(RETIRED_EFFECTS.values())
+    gone, out = [], []
+    for line in text.split('\n'):
+        hit = [n for n in names if n.lower() in line.lower()]
+        if not hit:
+            out.append(line)
+            continue
+        gone += [n for n in hit if n not in gone]
+        if not line.lstrip().startswith('- '):
+            out.append(line) if line.startswith('#') else None   # a heading stays, a sentence about it goes
+            continue
+        lead = line[:line.index('- ') + 2]
+        parts = line[len(lead):].split(', ')
+        keep = [x for x in parts if not any(x.strip().lower().startswith(n.lower()) for n in hit)]
+        if len(keep) == len(parts) or any(any(n.lower() in x.lower() for n in hit) for x in keep):
+            continue   # named inside a sentence: the whole line goes
+        if keep:
+            t = ', '.join(keep)
+            out.append(lead + t[0].upper() + t[1:] + ('' if t.endswith('.') or not line.rstrip().endswith('.') else ''))
+    return '\n'.join(out), gone
+
+
+def retired_note(names):
+    """The one plain line about retired picks, by the names the member saw."""
+    return 'left out %s: retired, no longer offered for new videos' % ' and '.join(names)
+TRANSITION_GAP = 13   # frames between transitions: a camera move runs 6 frames each side of its join, so closer ones collide
 
 
 def slugify(name):
@@ -207,10 +260,12 @@ def apply_overlay(s, st, cfg):
     add = []
     every = tr.get('every_join')
     first = tr.get('first_join')
+    placed = [h for h in have if h is not None]
     for i, at in enumerate(j for j in joins if j > 45 and j < cfg['frames'] - 15):
         kind = first if i == 0 and first else every
-        if kind and at not in have:
+        if kind and all(abs(at - p) >= TRANSITION_GAP for p in placed):   # joins a few frames apart get one transition
             add.append({'kind': 'transition', 'at': at, 'style': kind})
+            placed.append(at)
     if (first or every) and not joins:
         notes.append('no picture joins in this cut, so the %s transitions have nowhere to go' % tag)
     s = add_effects(s, add, tag + ': transitions on picture joins')
@@ -275,3 +330,9 @@ def hook_title(cfg):
     first_end = max(w['e'] for w in words if w['sent'] == words[0]['sent'])
     f_out = max(f_in + 45, min(round(first_end * FPS), f_in + 90))
     return {'text': title, 'in': f_in, 'out': min(f_out, cfg['frames'] - 1)}
+
+
+if __name__ == '__main__':   # a library: --help (or no arguments) prints what it is
+    import sys
+    print(__doc__.strip())
+    sys.exit(0)

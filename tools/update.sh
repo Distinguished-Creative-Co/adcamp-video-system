@@ -7,6 +7,7 @@
 #       UPDATE NONE | UPDATE SKIPPED <why> | UPDATE SYNC <folder> | UPDATE AVAILABLE <old> -> <new>: <what's new>
 #     GitHub is asked at most once a day (runtime/update-check.json). With --plugin, a plugin that is newer
 #     than ~/AVS comes first: SYNC means "copy it in", no download.
+case "${1:-}" in -h|--help) sed -n '2,/^[^#]/p' "$0" | sed -n 's/^# \{0,1\}//p'; exit 0;; esac   # --help: the usage, nothing else
 set -euo pipefail
 RE="$(cd "$(dirname "$0")/.." && pwd)"
 REPO="${AVS_REPO:-https://github.com/Distinguished-Creative-Co/adcamp-video-system}"

@@ -1,10 +1,11 @@
 #!/bin/bash
 # AdCamp Video System install test: builds the included sample clip in the Clean Talk starter look and renders it,
 # previews it in a second look (Big Energy), then checks the tools (draft, saved styles, the Picker, carousels,
-# joined clips, beat versions, the pages beside the chat). Takes 10 to 15 minutes (longer on Intel). Safe to run again.
+# joined clips, beat versions, three covers, Lights Down, the pages beside the chat). Takes 10 to 15 minutes (longer on Intel). Safe to run again.
 #   ~/AVS/tools/smoke_test.sh
 # The sample is a real reel its owner already approved, so this test approves its own previews.
 # Your own reels always wait for YOUR approval.
+case "${1:-}" in -h|--help) sed -n '2,/^[^#]/p' "$0" | sed -n 's/^# \{0,1\}//p'; exit 0;; esac   # --help: the usage, nothing else
 set -euo pipefail
 RE="$(cd "$(dirname "$0")/.." && pwd)"
 ENG="$RE/engine"
@@ -22,22 +23,56 @@ cp samples/sample-trims.json script/word-timings/sample-trims.json
 # --regen: always a fresh config, so a sample from an older version (or an interrupted run) is never reused
 scripts/make_reel.sh "$RAW" sample --face 510,760 --outdoor --regen --preview
 echo "(Expected on this first pass: NOT READY, the copy is blank and a few breaths between takes are flagged. The next steps set the look, fill the copy and sign off those breaths.)"
+# the validator's planted faults (test_layout.mjs --self-test): on this cards-and-panels build here, on a full-screen look in
+# step 3; every rule must find a place on one of the two. A member's own build runs only its reel's real checks.
+node scripts/test_layout.mjs sample --self-test > qa/sample/self-test-panels.log || { cat qa/sample/self-test-panels.log; echo "error: the validator missed a planted fault"; exit 1; }
 python3 scripts/make_style.py sample clean-talk --in-place --force
 python3 samples/fill_sample.py
 python3 scripts/verify_seams.py sample
 scripts/make_reel.sh "$RAW" sample --outdoor --preview
 ready sample
 
-say "2/4  Render it"
+say "2/4  Render it, with the third cover picked (cover C)"
+python3 - qa/sample/covers-given.json <<'PY'
+import json, sys
+sys.path.insert(0, 'scripts')
+import reel_config
+cfg = reel_config.load('sample')
+w = [x for x in cfg['words'] if x['t']]
+at = lambda t: next(round(x['s'] * 30) for x in w if x['t'].strip('.,').lower() == t)
+json.dump({'b': {'frame': at('pays'), 'title': 'Four different chiropractors', 'accent': 'Four'},
+           'c': {'frame': 45, 'title': 'Same four things', 'accent': 'four', 'back': 'four things', 'short': 'four',
+                 'fallback': {'frame': at('conversations'), 'title': 'Four conversations', 'accent': 'Four'}}}, open(sys.argv[1], 'w'))
+PY
+python3 scripts/cover_options.py sample --options qa/sample/covers-given.json >/dev/null
+python3 scripts/cover_options.py sample --pick c >/dev/null
 python3 scripts/approve_reel.py sample --by "install test (sample clip)"
 rm -f out/sample.mp4 out/sample-v*.mp4   # the test's own video: a re-run replaces it instead of adding a version
-scripts/make_reel.sh "$RAW" sample --render
+scripts/make_reel.sh "$RAW" sample --render   # any file the render could not load stops it (make_reel.sh reads its log)
+python3 - out/sample.mp4 qa/sample/storyboard/covers/cover-c.png <<'PY'
+import subprocess, sys
+g = lambda f: subprocess.run(['ffmpeg', '-v', 'error', '-i', f, '-frames:v', '1', '-vf', 'scale=108:192,format=gray', '-f', 'rawvideo', '-'],
+                             capture_output=True).stdout
+a, b = g(sys.argv[1]), g(sys.argv[2])
+d = sum(abs(x - y) for x, y in zip(a, b)) / float(max(len(a), 1))
+if len(a) != len(b) or d > 6:
+    sys.exit('error: frame 0 of the render is not cover C (it differs by %.1f): a file it draws did not load' % d)
+PY
+echo "  OK the render's first frame is the picked cover C, as its still shows it"
 
 say "3/4  A second look from the same take: Big Energy (preview only)"
 python3 scripts/make_style.py sample big-energy --force
 "$AVS_MATTE_PYTHON" scripts/matte_reel.py sample-big-energy
 python3 scripts/scene_map.py sample-big-energy
-node scripts/test_layout.mjs sample-big-energy
+node scripts/test_layout.mjs sample-big-energy --self-test > qa/sample/self-test-full.log || { cat qa/sample/self-test-full.log; echo "error: the validator missed a planted fault"; exit 1; }
+python3 - qa/sample/self-test-panels.log qa/sample/self-test-full.log <<'PY'
+import re, sys
+sk = [set(x.strip() for x in (re.search(r'\(skipped\): (.*)', open(f).read()) or [None, ''])[1].split(';') if x.strip()) for f in sys.argv[1:]]
+both = sk[0] & sk[1]
+if both:
+    sys.exit('error: planted faults with no place on either test reel, so their rules went untested: %s' % ', '.join(sorted(both)))
+PY
+echo "  OK every planted fault caught by its own rule (cards and panels, then full screen)"
 ready sample-big-energy
 python3 scripts/extract_reel_stills.py sample-big-energy --preview >/dev/null
 # a second version takes on its own look, never the first one's: Soft Story has no hook title and its own transition
@@ -69,7 +104,7 @@ print('  OK a change of look after a fix')
 PY
 rm -f "$ENG/qa/sample-soft-story-before.ts"
 
-say "4/4  The tools: a draft, a saved style, the Picker, a carousel, joined clips, beat versions"
+say "4/4  The tools: a draft, a saved style, the Picker, a carousel, joined clips, beat versions, covers, Lights Down"
 T="$(mktemp -d)"
 for f in picks default last; do [ -f "styles/$f.json" ] && cp "styles/$f.json" "$T/keep-$f.json"; done   # a re-run keeps their own picks and default
 restore(){   # on success or failure: their own picks, default and last-time record come back, the test's are gone
@@ -82,6 +117,10 @@ trap restore EXIT
 fail(){ echo "error: $*"; exit 1; }
 scripts/make_reel.sh "$RAW" sample --draft >/dev/null && [ -s out/drafts/sample-DRAFT.mp4 ] || fail "the draft was not made"
 echo "  OK draft"
+python3 scripts/test_cutter.py > "$T/cutter.log" 2>&1 || { cat "$T/cutter.log"; fail "the cutter checks failed"; }
+echo "  OK cutter checks (several trims, breaths inside pauses, transitions apart)"
+python3 scripts/test_effect_kinds.py sample > "$T/kinds.log" 2>&1 || { cat "$T/kinds.log"; fail "a check could not read every effect kind"; }
+echo "  OK every effect kind, retired ones too, reads in the checks"
 python3 - <<'PAGES'
 import json
 p = open('qa/sample/storyboard/pane.html').read()
@@ -161,12 +200,68 @@ b1 = storyboard.beats(cfg)[0]
 w = next(w for w in cfg['words'] if w['t'] and w['t'].strip('.,').lower() == 'conversation')
 f = round(w['s'] * 30)
 a, b = max(b1['from'], f - 4), min(b1['to'], f + 40)
-json.dump([{'label': 'Stamp', 'effects': [{'kind': 'word-stamp', 'in': a, 'out': b, 'word': 'conversation'}]},
+json.dump([{'label': 'Snap', 'effects': [{'kind': 'snap-zoom', 'in': a, 'out': b, 'at': f + 2, 'scale': 1.15}]},
            {'label': 'Nothing', 'effects': []}], open(sys.argv[1], 'w'))
 PY
 python3 scripts/beat_options.py sample-big-energy b01 --options "$T/opts.json" >/dev/null || fail "the beat versions did not render"
 [ -s out/drafts/sample-big-energy-b01-a.mp4 ] && [ -s out/drafts/sample-big-energy-b01-b.mp4 ] || fail "a beat version is missing"
 echo "  OK beat versions"
+# three covers on the storyboard: made from the sample's own words, a pick changes frame 0, a paid reel gets no words behind
+cp src/methodology/reels/sample.config.ts "$T/sample-config.ts"; cp qa/sample/preview/f0000.png "$T/f0000.png"
+python3 - "$T/covers.json" <<'PY'
+import json, sys
+sys.path.insert(0, 'scripts')
+import reel_config
+cfg = reel_config.load('sample')
+w = [x for x in cfg['words'] if x['t']]
+at = lambda t: next(round(x['s'] * 30) for x in w if x['t'].strip('.,').lower() == t)
+json.dump({'b': {'frame': at('pays'), 'title': 'Four different chiropractors', 'accent': 'Four'},
+           'c': {'frame': 45, 'title': 'Same four things', 'accent': 'four', 'back': 'four things', 'short': 'four',
+                 'fallback': {'frame': at('conversations'), 'title': 'Four conversations', 'accent': 'Four'}}}, open(sys.argv[1], 'w'))
+PY
+python3 scripts/cover_options.py sample --options "$T/covers.json" > "$T/covers.log" 2>&1 || { cat "$T/covers.log"; fail "the three covers were not made"; }
+for x in a b c; do [ -s "qa/sample/storyboard/covers/cover-$x.png" ] || fail "cover $x is missing"; done
+grep -q 'id="cover-b"' qa/sample/storyboard/pane.html || fail "the storyboard has no cover row"
+python3 scripts/cover_options.py sample --pick b >/dev/null || fail "the cover pick did not go in"
+cmp -s "$T/f0000.png" qa/sample/preview/f0000.png && fail "picking cover B did not change the first frame"
+python3 - "$T/covers.json" "$T/covers-paid.json" <<'PY'
+import json, re, sys
+t = open('src/methodology/reels/sample.config.ts').read().replace('"id": "sample"', '"id": "sample-paid-check"', 1)
+t = t.replace('"placement": "organic"', '"placement": "paid"', 1)
+t = re.sub(r'"post": \{[^}]*\}', '"post": {"keyword": "", "gets": "", "link": ""}', t, count=1)   # an ad has ad copy, no comment keyword
+open('src/methodology/reels/sample-paid-check.config.ts', 'w').write(t)
+g = json.load(open(sys.argv[1]))   # the same covers file as the regular post, plus the cover it had first
+json.dump(dict(g, a={'frame': 45, 'title': 'Same four things', 'accent': 'four'}), open(sys.argv[2], 'w'))
+PY
+python3 scripts/cover_options.py sample-paid-check --options "$T/covers-paid.json" > "$T/covers-paid.log" 2>&1 || { cat "$T/covers-paid.log"; fail "the same covers file did not work on a paid ad"; }
+python3 -c "import json,sys; d=json.load(open('qa/sample-paid-check/covers.json')); sys.exit(any(d['options'][x].get('back') for x in 'abc'))" \
+  || fail "a paid ad was given words behind the head on its cover"
+rm -f src/methodology/reels/sample-paid-check.config.ts; rm -rf qa/sample-paid-check qa/sample/covers.json qa/sample/storyboard/covers
+cp "$T/sample-config.ts" src/methodology/reels/sample.config.ts; cp "$T/f0000.png" qa/sample/preview/f0000.png
+python3 scripts/storyboard.py sample >/dev/null
+echo "  OK covers (three to pick from, a pick changes the first frame, a paid ad gets its frame and title C)"
+# Lights Down on one spoken line: its checks pass, its cutout is made and the part renders
+python3 - "$T/lights.json" "$T/lights-beat" <<'PY'
+import json, sys
+sys.path.insert(0, 'scripts')
+import reel_config, storyboard
+cfg = reel_config.load('sample')
+w = [x for x in cfg['words'] if x['t']]
+a = round(next(x for x in w if x['t'].lower().startswith("they'd"))['s'] * 30) - 2
+b = round(next(x for x in w if x['t'].strip('.').lower() == 'scratch')['e'] * 30) + 4
+bt = next(x for x in storyboard.beats(cfg) if x['from'] <= a < x['to'])
+b = min(b, bt['to'])
+if b - a < 30:
+    sys.exit('error: no line long enough for Lights Down in the sample')
+json.dump([{'label': 'Lights down', 'effects': [{'kind': 'lights-down', 'in': a, 'out': b}]}, {'label': 'Nothing', 'effects': []}], open(sys.argv[1], 'w'))
+open(sys.argv[2], 'w').write(bt['id'])
+PY
+LB="$(cat "$T/lights-beat")"
+python3 scripts/beat_options.py sample "$LB" --options "$T/lights.json" > "$T/lights.log" 2>&1 || { cat "$T/lights.log"; fail "Lights Down did not pass its checks or render"; }
+[ -s "out/drafts/sample-$LB-a.mp4" ] || fail "the Lights Down part was not rendered"
+ls public/host/sample-fg-ld-*.webm >/dev/null 2>&1 || fail "the Lights Down cutout was not made"
+rm -f "qa/sample/options-$LB.json" public/host/sample-fg-ld-*
+echo "  OK Lights Down"
 # clean up everything this step made
 python3 - <<'PY'
 import os, re, shutil

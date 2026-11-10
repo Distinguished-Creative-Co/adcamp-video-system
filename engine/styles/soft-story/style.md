@@ -8,11 +8,11 @@ Uses your brand fonts and color, so it already looks like yours. Make it yours: 
 - Your words step gently down the frame, the key word of each line in your second font, underlined as you say it.
 
 ## The open
-- Your opening as a magazine cover when it suits (Cover Story), otherwise straight into you talking.
+- Straight into you talking, with no title over your first line.
 
 ## Pace and framing
 - Gentle: no zooms, an iris at the first cut, a slightly tighter framing on every other take.
 - Warm, soft color.
 
 ## Extras it reaches for
-- Quote Card for words someone said, Pinned Line for your keyword, Arrow Note, Note Wall for a short list.
+- Lights Down on the one line that matters most, Pinned Line for your keyword, Quote Card for words someone said, Glass Word, Note Wall for a short list, Arrow Note.

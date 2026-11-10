@@ -59,11 +59,11 @@
  ],
  "effects": [
   {
-   "key": "word-stamp",
-   "name": "Word Stamp",
-   "line": "One spoken word stamped on screen.",
-   "preview": "previews/effects/word-stamp.mp4",
-   "poster": "previews/effects/word-stamp.jpg"
+   "key": "snap-zoom",
+   "name": "Snap Zoom",
+   "line": "A slow push in, then a quick snap on your most important word.",
+   "preview": "previews/effects/snap-zoom.mp4",
+   "poster": "previews/effects/snap-zoom.jpg"
   },
   {
    "key": "giant-captions",
@@ -71,6 +71,83 @@
    "line": "Your words huge, one at a time.",
    "preview": "previews/effects/giant-captions.mp4",
    "poster": "previews/effects/giant-captions.jpg"
+  },
+  {
+   "key": "glass-word",
+   "name": "Glass Word",
+   "line": "A huge frosted-glass word behind you.",
+   "preview": "previews/effects/glass-word.mp4",
+   "poster": "previews/effects/glass-word.jpg"
+  },
+  {
+   "key": "lights-down",
+   "name": "Lights Down",
+   "line": "The room behind you goes dim for one line, and you stay in the light.",
+   "preview": "previews/effects/lights-down.mp4",
+   "poster": "previews/effects/lights-down.jpg"
+  },
+  {
+   "key": "pinned-line",
+   "name": "Pinned Line",
+   "line": "One short line pinned at the top the whole time.",
+   "preview": "previews/effects/pinned-line.mp4",
+   "poster": "previews/effects/pinned-line.jpg"
+  },
+  {
+   "key": "intertitle",
+   "name": "Title Card",
+   "line": "A short title card with a few of your words.",
+   "preview": "previews/effects/intertitle.mp4",
+   "poster": "previews/effects/intertitle.jpg"
+  },
+  {
+   "key": "giant-number",
+   "name": "Giant Number",
+   "line": "Your list number fills the screen with a pop, covering you for about half a second.",
+   "preview": "previews/effects/giant-number.mp4",
+   "poster": "previews/effects/giant-number.jpg"
+  },
+  {
+   "key": "list-tracker",
+   "name": "List Tracker",
+   "line": "A header that counts through your list and stays up.",
+   "preview": "previews/effects/list-tracker.mp4",
+   "poster": "previews/effects/list-tracker.jpg"
+  },
+  {
+   "key": "receipt",
+   "name": "Receipt",
+   "line": "A short list printing line by line.",
+   "preview": "previews/effects/receipt.mp4",
+   "poster": "previews/effects/receipt.jpg"
+  },
+  {
+   "key": "note-wall",
+   "name": "Note Wall",
+   "line": "Paper notes with your words stick up around you.",
+   "preview": "previews/effects/note-wall.mp4",
+   "poster": "previews/effects/note-wall.jpg"
+  },
+  {
+   "key": "counter",
+   "name": "Big Number",
+   "line": "One big number you said, with a label.",
+   "preview": "previews/effects/counter.mp4",
+   "poster": "previews/effects/counter.jpg"
+  },
+  {
+   "key": "pie",
+   "name": "Pie",
+   "line": "A pie that fills to the share you said.",
+   "preview": "previews/effects/pie.mp4",
+   "poster": "previews/effects/pie.jpg"
+  },
+  {
+   "key": "quote-card",
+   "name": "Quote Card",
+   "line": "Words someone said, typed out in quotes.",
+   "preview": "previews/effects/quote-card.mp4",
+   "poster": "previews/effects/quote-card.jpg"
   },
   {
    "key": "icon-strike",
@@ -94,76 +171,6 @@
    "poster": "previews/effects/live-markup.jpg"
   },
   {
-   "key": "keycaps",
-   "name": "Keycaps",
-   "line": "Keys typing out your keyword, like SITE.",
-   "preview": "previews/effects/keycaps.mp4",
-   "poster": "previews/effects/keycaps.jpg"
-  },
-  {
-   "key": "receipt",
-   "name": "Receipt",
-   "line": "A short list printing line by line.",
-   "preview": "previews/effects/receipt.mp4",
-   "poster": "previews/effects/receipt.jpg"
-  },
-  {
-   "key": "intertitle",
-   "name": "Title Card",
-   "line": "A short title card with a few of your words.",
-   "preview": "previews/effects/intertitle.mp4",
-   "poster": "previews/effects/intertitle.jpg"
-  },
-  {
-   "key": "counter",
-   "name": "Big Number",
-   "line": "One big number you said, with a label.",
-   "preview": "previews/effects/counter.mp4",
-   "poster": "previews/effects/counter.jpg"
-  },
-  {
-   "key": "pie",
-   "name": "Pie",
-   "line": "A pie that fills to the share you said.",
-   "preview": "previews/effects/pie.mp4",
-   "poster": "previews/effects/pie.jpg"
-  },
-  {
-   "key": "list-tracker",
-   "name": "List Tracker",
-   "line": "A header that counts through your list and stays up.",
-   "preview": "previews/effects/list-tracker.mp4",
-   "poster": "previews/effects/list-tracker.jpg"
-  },
-  {
-   "key": "snap-zoom",
-   "name": "Snap Zoom",
-   "line": "A slow push in, then a quick snap on your most important word.",
-   "preview": "previews/effects/snap-zoom.mp4",
-   "poster": "previews/effects/snap-zoom.jpg"
-  },
-  {
-   "key": "quote-card",
-   "name": "Quote Card",
-   "line": "Words someone said, typed out in quotes.",
-   "preview": "previews/effects/quote-card.mp4",
-   "poster": "previews/effects/quote-card.jpg"
-  },
-  {
-   "key": "pinned-line",
-   "name": "Pinned Line",
-   "line": "One short line pinned at the top the whole time.",
-   "preview": "previews/effects/pinned-line.mp4",
-   "poster": "previews/effects/pinned-line.jpg"
-  },
-  {
-   "key": "cover-story",
-   "name": "Cover Story",
-   "line": "Your opening as a magazine cover.",
-   "preview": "previews/effects/cover-story.mp4",
-   "poster": "previews/effects/cover-story.jpg"
-  },
-  {
    "key": "highlighter",
    "name": "Highlighter",
    "line": "A highlighter sweeps a line on your screenshot. Needs a screenshot from you.",
@@ -171,25 +178,11 @@
    "poster": "previews/effects/highlighter.jpg"
   },
   {
-   "key": "glass-word",
-   "name": "Glass Word",
-   "line": "A huge frosted-glass word behind you.",
-   "preview": "previews/effects/glass-word.mp4",
-   "poster": "previews/effects/glass-word.jpg"
-  },
-  {
-   "key": "note-wall",
-   "name": "Note Wall",
-   "line": "Paper notes with your words stick up around you.",
-   "preview": "previews/effects/note-wall.mp4",
-   "poster": "previews/effects/note-wall.jpg"
-  },
-  {
-   "key": "arrow-note",
-   "name": "Arrow Note",
-   "line": "A handwritten note with an arrow pointing at something.",
-   "preview": "previews/effects/arrow-note.mp4",
-   "poster": "previews/effects/arrow-note.jpg"
+   "key": "keycaps",
+   "name": "Keycaps",
+   "line": "Keys typing out your keyword, like SITE.",
+   "preview": "previews/effects/keycaps.mp4",
+   "poster": "previews/effects/keycaps.jpg"
   },
   {
    "key": "comment-box",
@@ -199,11 +192,11 @@
    "poster": "previews/effects/comment-box.jpg"
   },
   {
-   "key": "giant-number",
-   "name": "Giant Number",
-   "line": "Your list number fills the screen with a pop, covering you for about half a second.",
-   "preview": "previews/effects/giant-number.mp4",
-   "poster": "previews/effects/giant-number.jpg"
+   "key": "arrow-note",
+   "name": "Arrow Note",
+   "line": "A handwritten note with an arrow pointing at something.",
+   "preview": "previews/effects/arrow-note.mp4",
+   "poster": "previews/effects/arrow-note.jpg"
   }
  ],
  "transitions": [

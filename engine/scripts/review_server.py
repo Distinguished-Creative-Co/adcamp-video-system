@@ -4,7 +4,9 @@
     python3 scripts/review_server.py <name> [--port 8770] [--until-done]
 
 Open the address it prints. Notes from the page land in qa/<name>/storyboard/notes.json as a list of
-{"beat": "b03" or "all", "text": ..., "at": time}; "all" + "go" means the person pressed "Done".
+{"beat": "b03" or "all", "text": ..., "at": time}; "all" + "go" means the person pressed "Done", and "cover" + "pick b"
+means they chose cover B on the cover row (it prints COVER PICKED b: run cover_options.py <name> --pick b). A cover
+row with "used": true was put on already (cover_options.py marks it on the pick): never apply it again.
 Each save replaces the notes for the beats it sends (an empty text clears one) and keeps the rest. Standard
 library only. Ctrl+C stops it. --until-done prints "STORYBOARD DONE <n> notes" and stops once they press Done
 (or after an hour without a visit: "STORYBOARD CLOSED"), so Claude, running it in the background, hears when
@@ -87,7 +89,9 @@ def main():
                 json.dump(kept, open(notes_path, 'w'), indent=1)
             last['t'] = time.time()
             for n in incoming:
-                if n.get('text'):
+                if str(n.get('beat')) == 'cover' and str(n.get('text', '')).startswith('pick '):
+                    print('COVER PICKED %s' % str(n.get('text'))[5:6], flush=True)   # run cover_options.py <name> --pick <letter>
+                elif n.get('text'):
                     print('note %s: %s' % (n.get('beat'), n.get('text')), flush=True)
                 elif str(n.get('beat')) in had:
                     print('note %s: cleared' % n.get('beat'), flush=True)
@@ -111,4 +115,7 @@ def main():
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

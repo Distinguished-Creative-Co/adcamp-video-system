@@ -31,11 +31,12 @@
   "iris"
  ],
  "effects_allowed": [
-  "cover-story",
-  "quote-card",
+  "lights-down",
   "pinned-line",
-  "arrow-note",
-  "note-wall"
+  "quote-card",
+  "glass-word",
+  "note-wall",
+  "arrow-note"
  ],
  "hook_title": false
 }

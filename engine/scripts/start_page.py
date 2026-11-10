@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """The start page: every video begins here, beside the chat, before anything is cut. The member picks a caption style
-(8, each playing), 2 to 4 effects (21, each playing, grouped by what they're for), pastes a script or lets Claude
+(8, each playing), 2 to 4 effects (20, each playing, in three groups by what they need), pastes a script or lets Claude
 write it from what they said, and sets regular post or paid ad and a music vibe. Prefilled from last time, so a
 video like the last one is one press of Start.
 
@@ -40,12 +40,15 @@ OUT = os.path.join(ROOT, 'qa', 'start')
 LAST = os.path.join(ROOT, 'styles', 'start-last.json')
 PICKED = os.path.join(OUT, 'picked.json')
 MAX_FX = 4
+# the effects in three groups by what the member has to bring, the same on the start page and in the Picker (heading,
+# the short line under it, the keys). Word Stamp and Cover Story were retired from the pages in 2.1.0: older videos keep
+# them, nobody is offered them.
 GROUPS = [
-    ('For your words', ['word-stamp', 'giant-captions', 'snap-zoom', 'glass-word', 'quote-card', 'intertitle', 'arrow-note', 'icon-strike']),
-    ('For numbers', ['counter', 'pie']),
-    ('For lists and steps', ['giant-number', 'list-tracker', 'receipt', 'note-wall']),
-    ('For the open and the ask', ['cover-story', 'pinned-line', 'keycaps', 'comment-box']),
-    ('For your screenshots', ['page-scroll', 'live-markup', 'highlighter']),
+    ('Works on any video', '', ['snap-zoom', 'giant-captions', 'glass-word', 'lights-down', 'pinned-line', 'intertitle']),
+    ('Fits when the words are there', "Claude adds these only where your video has a list, a number, a quote or a no.",
+     ['giant-number', 'list-tracker', 'receipt', 'note-wall', 'counter', 'pie', 'quote-card', 'icon-strike']),
+    ('Needs something from you', 'Each needs one thing from you: a screenshot, a comment keyword, or something in the shot to point at.',
+     ['page-scroll', 'live-markup', 'highlighter', 'keycaps', 'comment-box', 'arrow-note']),
 ]
 ORGANIC_ONLY = {'comment-box'}   # a paid ad sends people to the link, not the comments
 NEEDS_SHOT = ('page-scroll', 'live-markup', 'highlighter')   # these need a real screenshot from them (public/proof/)
@@ -79,6 +82,30 @@ def last_picks():
     return d
 
 
+def first_ticks(look=None):
+    """The look's first-time ticks: up to three of its effects the page offers (no screenshot ones). A look of theirs
+    that named only retired effects: the ticks of the starter it was made from, else Clean Talk's, never zero by
+    accident (zero means a captions-only video). Their look's file is left as it is."""
+    fx_keys = {e['key'] for e in catalog()['effects']}
+    st = look_in_force(look)
+    first = lambda look: [k for k in (look or {}).get('effects_allowed') or [] if k in fx_keys and k not in ('page-scroll', 'live-markup', 'highlighter')][:3]  # noqa: E731
+    fx = first(st)
+    if not fx and any(k not in fx_keys and k != 'card' for k in st.get('effects_allowed') or []):
+        fx = first(L.find(st.get('started_from') or '') or L.by_slug('clean-talk'))
+    return fx
+
+
+def stored_picks(path):
+    """A stored pick list (qa/<reel>/start.json) without retired effects. When those were all it had, the look's own
+    first effects instead (the same rule as the start page's clean()), with "fallback" set. Returns (picks, the
+    retired names)."""
+    p, gone = L.read_picks(path)
+    if gone and not p.get('effects'):
+        p['effects'] = first_ticks(p.get('look') if L.by_slug(p.get('look') or '') else None)
+        p['fallback'] = True
+    return p, gone
+
+
 def prefill(look=None):
     """The picks last made in this look, else the look's own: its caption style and up to three of its effects. Post
     type, music and color carry over from last time either way."""
@@ -86,13 +113,16 @@ def prefill(look=None):
     fx_keys = {e['key'] for e in cat['effects']}
     st = look_in_force(look)
     last = last_picks()
-    fx = [k for k in st.get('effects_allowed') or [] if k in fx_keys and k not in ('page-scroll', 'live-markup', 'highlighter')][:3]
+    fx = first_ticks(look)
     p = {'captionStyle': st.get('captionStyle') or 'lines', 'effects': fx, 'look': st.get('slug'),   # no caption style of its own (cards and panels): the build's own, lines
          'placement': last.get('placement', 'organic'), 'music': last.get('music', 'none'), 'color': last.get('color', 'natural')}
     mine = last['looks'].get(st.get('slug')) or {}
     if mine.get('captionStyle'):
         p['captionStyle'] = mine['captionStyle']
-        p['effects'] = [k for k in mine.get('effects') or [] if k in fx_keys][:MAX_FX]
+        kept = [k for k in mine.get('effects') or [] if k in fx_keys][:MAX_FX]
+        # their picks were all retired effects: the look's own first-time ticks, never zero (zero means captions only,
+        # which they never chose). An empty list they saved on purpose stays empty.
+        p['effects'] = kept if kept or not mine.get('effects') else fx
     return p
 
 
@@ -110,14 +140,20 @@ def colors(video_jpg):
     return out
 
 
-def state(video=None, script=None, look=None):
-    cat = catalog()
+def effect_groups(cat):
+    """The catalog's effects in GROUPS order, each group with its short line (the Picker uses the same)."""
     by = {e['key']: e for e in cat['effects']}
-    groups = [{'name': g, 'items': [by[k] for k in keys if k in by]} for g, keys in GROUPS]
-    seen = {k for _, keys in GROUPS for k in keys}
+    groups = [{'name': g, 'note': note, 'items': [by[k] for k in keys if k in by]} for g, note, keys in GROUPS]
+    seen = {k for _, _, keys in GROUPS for k in keys}
     rest = [e for e in cat['effects'] if e['key'] not in seen]
     if rest:
-        groups.append({'name': 'More', 'items': rest})
+        groups.append({'name': 'More', 'note': '', 'items': rest})
+    return groups
+
+
+def state(video=None, script=None, look=None):
+    cat = catalog()
+    groups = effect_groups(cat)
     st = look_in_force(look)
     name = st.get('aliases', [st.get('name')])[0] if st.get('hidden') else st.get('name')
     return {'captions': cat['captions'], 'groups': groups, 'max': MAX_FX, 'picks': prefill(look), 'look': name or 'Clean Talk',
@@ -180,7 +216,10 @@ def clean(p):
     if p.get('captionStyle') not in caps:
         raise ValueError('pick a caption style')
     placement = 'paid' if p.get('placement') == 'paid' else 'organic'
+    retired = [L.RETIRED_EFFECTS[k] for k in p.get('effects') or [] if k in L.RETIRED_EFFECTS]   # a page from 2.0.0
     fx = [k for k in p.get('effects') or [] if k in fxs]
+    if retired and not fx:   # only retired ones ticked: never a captions-only video they didn't choose
+        fx = first_ticks(p.get('look') if L.by_slug(p.get('look') or '') else None)
     ticked = fx[:MAX_FX]   # what they ticked, kept for next time even when this ad leaves one out
     dropped = [k for k in ticked if placement == 'paid' and k in ORGANIC_ONLY]
     fx = [k for k in ticked if k not in dropped]
@@ -191,7 +230,7 @@ def clean(p):
         raise ValueError('pick one of the color looks')
     look = p.get('look') if L.by_slug(p.get('look') or '') else None
     return {'captionStyle': p['captionStyle'], 'effects': fx, 'placement': placement, 'music': music, 'color': lut, 'look': look,
-            'script': script if not p.get('noScript') else '', 'dropped': dropped, 'ticked': ticked,
+            'script': script if not p.get('noScript') else '', 'dropped': dropped, 'ticked': ticked, 'retired': retired,
             'at': datetime.datetime.now().astimezone().isoformat(timespec='seconds')}
 
 
@@ -206,6 +245,7 @@ def saved_line(p):
         p['captionStyle'], cn.get(p['captionStyle']), ','.join(p['effects']) or 'none', ', '.join(fn.get(k, k) for k in p['effects']) or 'none',
         p.get('color', 'natural'), p['placement'], p['music'], ('%d words, first line: %s' % (len(p['script'].split()), p['script'].splitlines()[0][:80])) if p['script'] else 'none',
         (', dropped for a paid ad: %s' % ', '.join(fn.get(k, k) for k in p['dropped'])) if p['dropped'] else '') + (
+        (', %s' % L.retired_note(p['retired'])) if p.get('retired') else '') + (
         ', needs a screenshot from them: %s' % ', '.join(fn.get(k, k) for k in p['effects'] if k in NEEDS_SHOT) if any(k in NEEDS_SHOT for k in p['effects']) else '')
 
 
@@ -237,7 +277,7 @@ def remember(key, value, reel=None):
     """A change made after the start ("make it moodier", other captions) kept for this video, so a later restyle puts it
     back on instead of the start page's pick (qa/<reel>/start.json), and carried into next time's prefill."""
     sp = os.path.join(ROOT, 'qa', reel, 'start.json') if reel else None
-    picks = json.load(open(sp)) if sp and os.path.exists(sp) else None
+    picks = L.read_picks(sp)[0] if sp and os.path.exists(sp) else None
     if picks is not None:
         picks[key] = value
         json.dump(picks, open(sp, 'w'), indent=1)
@@ -253,13 +293,20 @@ def remember(key, value, reel=None):
         p[key] = value
     os.makedirs(os.path.dirname(LAST), exist_ok=True)
     json.dump(p, open(LAST, 'w'), indent=1)
-    say('remembered %s=%s %s' % (key, value, 'for %s and the next start page' % reel if picks is not None else 'for the next start page'))
+    on_video = bool(reel and key == 'color' and os.path.exists(__import__('reel_config').config_path(reel)))
+    where = []
+    if on_video or picks is not None:
+        where.append('put on %s now' % reel if on_video else 'kept for %s' % reel)
+    where.append('kept for the next start page')
+    say('remembered %s=%s: %s' % (key, value, ', and '.join(where)))
 
 
 def use(name):
     if not os.path.exists(PICKED):
         sys.exit('start_page: nothing picked yet (the start page saves it)')
-    p = json.load(open(PICKED))
+    p, gone = L.read_picks(PICKED)
+    if gone:
+        say(L.retired_note(gone))
     os.makedirs(os.path.join(ROOT, 'qa', name), exist_ok=True)
     json.dump(p, open(os.path.join(ROOT, 'qa', name, 'start.json'), 'w'), indent=1)
     sp = os.path.join(ROOT, 'script', name + '.txt')
@@ -296,7 +343,9 @@ def apply(name):
     sp = os.path.join(ROOT, 'qa', name, 'start.json')
     if not os.path.exists(sp):
         sys.exit('start_page: %s has no start picks (start_page.py use %s first)' % (name, name))
-    p = json.load(open(sp))
+    p, gone = stored_picks(sp)
+    if gone:
+        say(L.retired_note(gone) + ('. None left, so the look\'s own first effects go on instead' if p.get('fallback') else ''))
     path = reel_config.config_path(name)
     cfg = reel_config.load(name)
     s = open(path).read()
@@ -434,4 +483,7 @@ def main():
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     main()

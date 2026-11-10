@@ -30,7 +30,7 @@
       <h2 id="h-fx">Effects</h2>
       <p class="note">Pick any. Claude only uses one where it fits what you're saying.</p>
       <label class="switch"><input type="checkbox" id="partsw"> Choose where in your video each effect may go (tick an effect, then press Start, Middle or End on it)</label>
-      <div class="grid" id="effects" aria-labelledby="h-fx"></div>
+      <div id="effects" aria-labelledby="h-fx"></div>
     </section>
     <section class="pick-sec" aria-labelledby="h-tr">
       <h2 id="h-tr">Transitions</h2>
@@ -188,7 +188,17 @@
     C = st;
     st.catalog.styles.concat(st.mine).forEach(function (it) { $('styles').appendChild(card(it, 'styles', 'radio', 'style')); });
     st.catalog.captions.forEach(function (it) { $('captions').appendChild(card(it, 'captions', 'radio', 'captions')); });
-    st.catalog.effects.forEach(function (it) { $('effects').appendChild(card(it, 'effects', 'checkbox', 'fx')); });
+    // in the start page's three groups (by what each needs), each with its short line
+    (st.groups || [{ name: '', note: '', items: st.catalog.effects }]).forEach(function (g) {
+      var sec = document.createElement('div');
+      sec.className = 'fxgroup';
+      sec.innerHTML = (g.name ? '<p class="label">' + esc(g.name) + '</p>' : '') + (g.note ? '<p class="fxnote">' + esc(g.note) + '</p>' : '');
+      var grid = document.createElement('div');
+      grid.className = 'grid';
+      g.items.forEach(function (it) { grid.appendChild(card(it, 'effects', 'checkbox', 'fx')); });
+      sec.appendChild(grid);
+      $('effects').appendChild(sec);
+    });
     st.catalog.transitions.forEach(function (it) { $('transitions').appendChild(card(it, 'transitions', 'checkbox', 'tr')); });
     (st.catalog.fonts || []).forEach(function (it) { $('fonts').appendChild(card(it, 'fonts', 'radio', 'fonts')); });
     var p = st.picks;

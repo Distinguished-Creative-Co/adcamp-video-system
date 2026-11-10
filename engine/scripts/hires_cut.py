@@ -115,7 +115,13 @@ def main():
             return skip('the full-resolution cut was refused: %s' % exc)
         os.remove(norm)
         return finish(cut, tmp, out, skip)
-    chain = 'fps=%d' % FPS
+    sys.path.insert(0, HERE)
+    import normalize_source   # iPhone HDR: the same tone-map as the 1080 cut, or the sharp copy would not match it
+    try:
+        trc = next(x.get('color_transfer') for x in normalize_source.probe(raw)['streams'] if x.get('codec_type') == 'video')
+    except (subprocess.CalledProcessError, StopIteration, ValueError, KeyError):
+        trc = None
+    chain = normalize_source.tonemap_vf(trc) + 'fps=%d' % FPS
     if rec.get('unmirrored'):
         chain += ',hflip'
     rf = float(rec.get('reframe') or 1.0)
@@ -169,4 +175,7 @@ def finish(cut, tmp, out, skip):
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     sys.exit(main())

@@ -8,6 +8,7 @@ few seconds, and a "reset" cue word still in the audio. Each finding is reported
 plan beat it falls in. Exit 0 when clean, 1 when anything was found.
 Library use: scene_map.py imports norm() and find_repeats().
 """
+import os
 import json
 import re
 import sys
@@ -83,4 +84,7 @@ def main():
 
 
 if __name__ == '__main__':
+    if '--help' in sys.argv[1:] or sys.argv[1:2] == ['-h']:   # --help: the usage, nothing else
+        print((__doc__ or '').strip() or 'usage: python3 scripts/%s' % os.path.basename(__file__))
+        sys.exit(0)
     sys.exit(main())

@@ -6,7 +6,7 @@ and Meta ads. A script helps AVS cut cleaner, but it's optional.
 - **Your look, set once:** every video comes out in it. Start from one of four looks (Clean Talk, Big Energy, Soft
   Story, Show and Tell), all full frame in your own fonts and brand color, and tweak it in plain words.
 - **Your own styles:** send links to reels you love and AVS rebuilds that look on your videos. Or open the
-  Picker and choose by watching: 8 caption styles, 21 effects, 6 transitions and 4 font pairs, each playing on a
+  Picker and choose by watching: 8 caption styles, 20 effects, 6 transitions and 4 font pairs, each playing on a
   sample video.
 - **Music by vibe (optional):** say "calm and warm" or "upbeat" and pick from a few free tracks listed on Openverse
   as CC0, CC BY or public domain, licenses that allow business use, ads included. The license details come from
@@ -52,8 +52,8 @@ Or start a new chat in the Code tab and paste this instead:
 Install AdCamp Video System for me from https://github.com/Distinguished-Creative-Co/adcamp-video-system into ~/AVS (download it as a tar.gz with curl, not with git), then open ~/AVS/INSTALL.md and follow it step by step. Tell me what each step downloads and how big it is before it starts, and ask me before anything that needs an account, a password, or a choice from me.
 ```
 
-If you have the zip instead (`AVS-2.0.0.zip`), put it in Downloads and say "Install AdCamp Video System from
-~/Downloads/AVS-2.0.0.zip into ~/AVS, then follow ~/AVS/INSTALL.md".
+If you have the zip instead (`AVS-2.1.0.zip`), put it in Downloads and say "Install AdCamp Video System from
+~/Downloads/AVS-2.1.0.zip into ~/AVS, then follow ~/AVS/INSTALL.md".
 
 Claude walks you through everything, shows you your name in four font pairs so you can pick, makes a test video,
 helps you set your look, then gets you straight into your first video.

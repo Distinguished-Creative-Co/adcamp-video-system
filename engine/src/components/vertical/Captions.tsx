@@ -5,6 +5,7 @@ import { displayFace } from '../vc/fonts';
 import { LEAD_F } from '../../methodology/layout';
 import type { Line } from '../../methodology/timeline';
 import type { CaptionLook } from '../../methodology/ReelConfig';
+import { capTop } from '../../methodology/adsafe';
 
 /**
  * Word-timed caption lines, ported from Chris's own landscape engine's KineticCaption grammar: every word
@@ -23,7 +24,8 @@ export const CaptionLines: React.FC<{
   base: number; min: number; opacity: number; scrim?: boolean; align?: 'center' | 'left'; tone?: 'dark' | 'light';
   punch?: boolean;  // 1-2 words at a time: no backing box (it would show empty before a word pops), a heavy outline instead
   look?: CaptionLook;  // a saved style's type and color; absent = the house look, unchanged
-}> = ({ lines, x, w, top, cy, bottom, base, min, opacity, scrim, align = 'center', tone = 'dark', punch = false, look }) => {
+  paid?: boolean;      // a paid ad: a block centered on cy is clamped inside Meta's ad safe zone (adsafe.ts)
+}> = ({ lines, x, w, top, cy, bottom, base, min, opacity, scrim, align = 'center', tone = 'dark', punch = false, look, paid = false }) => {
   const light = tone === 'light';
   const face = displayFace(look?.font);
   const lk = look ?? {};
@@ -41,7 +43,15 @@ export const CaptionLines: React.FC<{
     alignItems: align === 'center' ? 'center' : 'flex-start', gap: 6, opacity,
     transform: `translateY(${drift + (1 - rise) * 12}px)`,
   };
-  if (cy !== undefined) { box.top = cy; box.transform += ' translateY(-50%)'; }
+  if (cy !== undefined && paid) {
+    // the block's own height (a row per line, a second row where a line would wrap), so it can be held inside the zone
+    const H = lines.reduce((n, l) => {
+      const size = lineSize(l, base, min, w, face.width);
+      const chars = l.words.reduce((c, x) => c + (x.t ? x.t.length + 1 : 0), 0);
+      return n + Math.max(1, Math.ceil((chars * face.width * size) / (w - (scrim ? 44 : 0)))) * size * 1.05 + (scrim ? 24 : 0);
+    }, 6 * (lines.length - 1));
+    box.top = capTop(cy, H, 0, true);
+  } else if (cy !== undefined) { box.top = cy; box.transform += ' translateY(-50%)'; }
   if (top !== undefined && bottom !== undefined) { box.top = top; box.height = bottom - top; box.justifyContent = 'center'; }
   return (
     <div style={box}>

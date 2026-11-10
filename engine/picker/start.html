@@ -138,7 +138,7 @@
   C.groups.forEach(function (g) {
     var sec = document.createElement('div');
     sec.className = 'fxgroup';
-    sec.innerHTML = '<p class="label">' + esc(g.name) + '</p>';
+    sec.innerHTML = '<p class="label">' + esc(g.name) + '</p>' + (g.note ? '<p class="fxnote">' + esc(g.note) + '</p>' : '');
     var grid = document.createElement('div');
     grid.className = 'grid';
     g.items.forEach(function (it) {
