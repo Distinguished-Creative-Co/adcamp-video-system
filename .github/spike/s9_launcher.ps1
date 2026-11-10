@@ -8,8 +8,9 @@ $res['PowerShell 5.1'] = (& $PY $E "C:\Users\Jane Doe\AVS\inbox\Mike's video & m
 $pw = 'C:\Program Files\PowerShell\7\pwsh.exe'
 $res['PowerShell 7'] = if (Test-Path $pw) { (& $pw -NoProfile -File "$R\call.ps1" 2>&1 | Out-String).Trim() } else { 'not on this machine' }
 # 3. cmd
-[IO.File]::WriteAllText("$R\call.cmd", "@`"$PY`" `"$E`" `"C:\Users\Jane Doe\AVS\inbox\Mike's video & more.mp4`" `"{\`"text\`": \`"it's here\`", \`"n\`": 2}`"`r`n")
-$res['cmd'] = (& cmd.exe /d /s /c "`"$R\call.cmd`"" 2>&1 | Out-String).Trim()
+[IO.File]::WriteAllText("$env:RUNNER_TEMP\call.cmd", "@`"$PY`" `"$E`" `"C:\Users\Jane Doe\AVS\inbox\Mike's video & more.mp4`" `"{\`"text\`": \`"it's here\`", \`"n\`": 2}`"`r`n")
+# the batch file itself sits at a path with no space, so only what it passes is under test
+$res['cmd'] = (& cmd.exe /d /c "$env:RUNNER_TEMP\call.cmd" 2>&1 | Out-String).Trim()
 # 4. Git Bash
 $u = { param($p) $p -replace '\\', '/' }
 [IO.File]::WriteAllText("$R\call.sh", "`"$(& $u $PY)`" `"$(& $u $E)`" 'C:\Users\Jane Doe\AVS\inbox\Mike'`"'`"'s video & more.mp4' '{`"text`": `"it'`"'`"'s here`", `"n`": 2}'`n")

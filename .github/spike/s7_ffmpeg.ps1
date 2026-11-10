@@ -11,7 +11,9 @@ $enc = (& ffmpeg -hide_banner -encoders 2>&1 | Out-String); $flt = (& ffmpeg -hi
 $has = @{}; foreach ($f in 'zscale', 'lut3d', 'loudnorm', 'drawtext', 'tonemap') { $has[$f] = $flt -match "\s$f\s" }
 $x264 = $enc -match 'libx264'; $vp9 = $enc -match 'libvpx-vp9'
 function Try-FF([string[]]$a) { & ffmpeg -v error -hide_banner @a 2> "$R\logs\ff-last.txt"; return ($LASTEXITCODE -eq 0) }
-$hlg = Try-FF @('-f', 'lavfi', '-i', 'testsrc2=s=320x240:d=1', '-vf', 'format=yuv420p10le,zscale=tin=arib-std-b67:pin=bt2020:min=bt2020nc:t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p', '-f', 'null', '-')
+# frames tagged as iPhone HDR (HLG) first: untagged test frames give zscale nothing to convert from, on a Mac too
+$hlg = Try-FF @('-f', 'lavfi', '-i', 'testsrc2=s=320x240:d=1', '-vf', 'format=yuv420p10le,setparams=color_primaries=bt2020:color_trc=arib-std-b67:colorspace=bt2020nc:range=tv,zscale=tin=arib-std-b67:pin=bt2020:min=bt2020nc:t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p', '-f', 'null', '-')
+Copy-Item -LiteralPath "$R\logs\ff-last.txt" "$R\logs\ff-hlg.txt" -ErrorAction SilentlyContinue
 $lutFull = Try-FF @('-f', 'lavfi', '-i', 'testsrc2=s=320x240:d=1', '-vf', "lut3d=file='$ENG\luts\warm.cube'", '-f', 'null', '-')
 Push-Location -LiteralPath $ENG
 $lutRel = Try-FF @('-f', 'lavfi', '-i', 'testsrc2=s=320x240:d=1', '-vf', 'lut3d=file=luts/warm.cube', '-f', 'null', '-')
