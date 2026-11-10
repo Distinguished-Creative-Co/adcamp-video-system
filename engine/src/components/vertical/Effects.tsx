@@ -3,7 +3,7 @@ import { Img, staticFile } from 'remotion';
 import { Ban, Calendar, Clock, DollarSign, Globe, MapPin, Megaphone, MessageCircle, Phone, Search, Star, ThumbsDown } from 'lucide-react';
 import { CREME_DARK, GOLD, glow, ACCENT_ON_FOOTAGE, moneyColor } from '../vc/style';
 import { SANS, accentFace } from '../vc/fonts';
-import { easeOutCubic } from '../../methodology/layout';
+import { clipBox, drift, easeInOutCubic, easeOutCubic, markReach, pushCam, pushMaxFor, pushWindow, scrollStop, type Rect } from '../../methodology/layout';
 import { AD_GIANT_CAPS, giantNumberLayout } from '../../methodology/adsafe';
 import type { CaptionLook, Effect, Word } from '../../methodology/ReelConfig';
 import { ArrowNote, CommentBox, CoverStory, ListTracker, NoteWall, QuoteCard } from './EffectsMore';
@@ -16,8 +16,9 @@ import { ArrowNote, CommentBox, CoverStory, ListTracker, NoteWall, QuoteCard } f
  *   word-stamp     one spoken word slammed on like a rubber stamp
  *   giant-captions the spoken words, one at a time, huge, in place of the normal captions
  *   icon-strike    an icon with a line struck through it ("no ads", "no calls")
- *   page-scroll    a real screenshot of a long page scrolling in a browser frame
- *   live-markup    a real screenshot with a circle, underline or arrow drawn onto it
+ *   page-scroll    a real screenshot of a long page scrolling in a browser frame; with a focus it scrolls to that part
+ *                  and the camera pushes in on it
+ *   live-markup    a real screenshot with a circle, underline or arrow drawn onto it, then the camera pushes in on it
  *   keycaps        keyboard keys pressed one after another, spelling a word
  *   receipt        a receipt printing a short list, one line per cue
  *   intertitle     a title card with one line of text
@@ -25,6 +26,8 @@ import { ArrowNote, CommentBox, CoverStory, ListTracker, NoteWall, QuoteCard } f
  *   pie            a share drawn as a pie, with its label
  *   giant-number   a list number slammed in huge, in front of everything: the one effect that covers the face, briefly
  *   transition     at a picture join: a camera move (whip, zoom, spin), a warm flash, or a shape (iris, bars)
+ * The three screenshot effects push in (pushCam, layout.ts) so the part that matters is readable on a phone; push: false
+ * turns that off for one. Every other card breathes faintly while it holds (drift, layout.ts), so nothing reads as frozen.
  * Numbers and words on screen pass the same spoken-words guard as every other text. In a paid ad the top band is drawn
  * lower and smaller by VerticalReel, and giant captions and the giant number sit inside Meta's ad safe zone (adsafe.ts).
  */
@@ -38,12 +41,17 @@ const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 /** in/out envelope shared by every card: ease in over `enter` frames, fade out over the last 8 */
 const env = (lf: number, len: number, enter = 10) => ({ e: easeOutCubic(lf / enter), out: clamp01((len - lf) / 8) });
 
-const Card: React.FC<{ lf: number; len: number; h?: number; children: React.ReactNode; pad?: number }> = ({ lf, len, h = BAND.h, children, pad = 28 }) => {
+/** A top-band card. It breathes while it holds (drift). The screenshot cards don't: their zoom is their movement. No
+ *  will-change layer here or on any drifting graphic: a layer keeps the raster scale it first met, so the same frame
+ *  came out different rendered alone, in order or in parallel (measured 2026-11-10); without it every frame is
+ *  pixel-identical however it is rendered. */
+const Card: React.FC<{ lf: number; len: number; h?: number; children: React.ReactNode; pad?: number; still?: boolean }> = ({ lf, len, h = BAND.h, children, pad = 28, still = false }) => {
   const { e, out } = env(lf, len);
+  const d = still ? { scale: 1, dy: 0 } : drift(lf);
   return (
     <div style={{ position: 'absolute', left: BAND.x, top: BAND.y, width: BAND.w, height: h, borderRadius: 30, background: PLATE,
       border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 28px 70px rgba(0,0,0,0.5)', overflow: 'hidden', padding: pad, boxSizing: 'border-box',
-      opacity: e * out, transform: `translateY(${(1 - e) * -36}px) scale(${0.96 + 0.04 * e})`, transformOrigin: '50% 0%' }}>
+      opacity: e * out, transform: `translateY(${(1 - e) * -36 + d.dy}px) scale(${(0.96 + 0.04 * e) * d.scale})`, transformOrigin: '50% 0%' }}>
       {children}
     </div>
   );
@@ -101,75 +109,118 @@ const IconStrike: React.FC<{ fx: Extract<Effect, { kind: 'icon-strike' }>; lf: n
   );
 };
 
+/** where a push stands at frame lf: the eased progress through its window, or none */
+const NO_PUSH = { k: 1, tx: 0, ty: 0 };
+type Cam = { k: number; tx: number; ty: number };
+const pushAt = (lf: number, win: { a: number; b: number } | null, vw: number, vh: number, pic: Rect, box: Rect | null, kMax: number): Cam =>
+  win && box ? pushCam(vw, vh, pic, box, easeInOutCubic((lf - win.a) / (win.b - win.a)), kMax) : NO_PUSH;
+const camStyle = (P: Cam): React.CSSProperties =>
+  ({ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, transform: `translate(${P.tx}px, ${P.ty}px) scale(${P.k})`, transformOrigin: '0 0' });
+const SOURCE: React.CSSProperties = { fontFamily: SANS, fontSize: 18, lineHeight: '22px', height: 22, color: CREME_DARK.inkDim, marginTop: 8, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' };
+/** A screenshot in the top band, shown whole at rest: as wide as the card allows, never taller than SHOT_H. The card
+ *  is cut to the picture's height (a wide screenshot leaves no empty band), and a tall one stands in the middle of the
+ *  card. The camera works on the whole card width, so a push into a tall phone screenshot fills the card. */
+const SHOT_W = BAND.w - 40, SHOT_H = BAND.h - 70;
+const shotFrame = (w: number, h: number) => {
+  const s = Math.min(SHOT_W / w, SHOT_H / h);
+  const dw = w * s, dh = h * s;
+  return { s, dh, pic: { x: (SHOT_W - dw) / 2, y: 0, w: dw, h: dh } as Rect, kMax: pushMaxFor(w, dw) };
+};
+
 const PageScroll: React.FC<{ fx: Extract<Effect, { kind: 'page-scroll' }>; lf: number; len: number }> = ({ fx, lf, len }) => {
-  const viewW = BAND.w - 40, viewH = BAND.h - 96;
-  const imgH = viewW * (fx.h / fx.w);
+  const viewW = BAND.w - 40;
+  const sc = viewW / fx.w;
+  const imgH = fx.h * sc;
+  // the browser bar (46) and the source line (30) share the card with the page; a page shorter than that shows whole
+  const viewH = Math.min(BAND.h - 116, imgH);
   const travel = Math.max(0, imgH - viewH);
-  const t = clamp01((lf - 8) / Math.max(1, len - 22));
-  const y = -travel * (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+  const f = fx.focus;
+  // with a focus the page scrolls to it (its centre mid-view, as far as the page allows) in the first 40%, then the
+  // camera pushes in on it and holds; without one it scrolls the whole page, as it always has
+  const endY = f ? scrollStop(f.y, f.h, sc, viewH, travel) : -travel;
+  const scrollEnd = f ? Math.max(20, Math.round(8 + (len - 22) * 0.4)) : len - 14;
+  const t = clamp01((lf - 8) / Math.max(1, scrollEnd - 8));
+  // to a focus: a softer landing (cubic), and the push starts as the scroll settles, so the two read as one move
+  const y = endY * (f ? easeInOutCubic(t) : t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+  const view: Rect = { x: 0, y: 0, w: viewW, h: viewH };
+  const box = f ? clipBox({ x: f.x * sc, y: f.y * sc + y, w: f.w * sc, h: f.h * sc }, view) : null;   // null until it scrolls into view
+  const P = pushAt(lf, f && fx.push !== false ? pushWindow(scrollEnd - 3, len) : null, viewW, viewH, view, box, pushMaxFor(fx.w, viewW));
   return (
-    <Card lf={lf} len={len} pad={20}>
+    <Card lf={lf} len={len} pad={20} h={viewH + 116} still>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 36, marginBottom: 10 }}>
         {[0, 1, 2].map((i) => <span key={i} style={{ width: 13, height: 13, borderRadius: 7, background: 'rgba(255,255,255,0.28)' }} />)}
         <span style={{ flex: 1, marginLeft: 10, height: 30, borderRadius: 15, background: 'rgba(255,255,255,0.08)', color: CREME_DARK.inkDim,
           fontFamily: SANS, fontSize: 20, display: 'flex', alignItems: 'center', paddingLeft: 14, overflow: 'hidden', whiteSpace: 'nowrap' }}>{fx.url ?? ''}</span>
       </div>
       <div style={{ position: 'relative', width: viewW, height: viewH, overflow: 'hidden', borderRadius: 14, background: '#fff' }}>
-        <Img src={staticFile(fx.src)} style={{ position: 'absolute', left: 0, top: y, width: viewW, height: imgH }} />
+        <div style={camStyle(P)}>
+          <Img src={staticFile(fx.src)} style={{ position: 'absolute', left: 0, top: y, width: viewW, height: imgH }} />
+        </div>
       </div>
-      <div style={{ fontFamily: SANS, fontSize: 18, color: CREME_DARK.inkDim, marginTop: 8 }}>{fx.source}</div>
+      <div style={SOURCE}>{fx.source}</div>
     </Card>
   );
 };
 
 const LiveMarkup: React.FC<{ fx: Extract<Effect, { kind: 'live-markup' }>; lf: number; len: number }> = ({ fx, lf, len }) => {
-  const viewW = BAND.w - 40, viewH = BAND.h - 70;
-  const s = Math.min(viewW / fx.w, viewH / fx.h);
-  const dw = fx.w * s, dh = fx.h * s;
+  const { s, dh, pic, kMax } = shotFrame(fx.w, fx.h);
   const draw = easeOutCubic(clamp01((lf - (fx.markAt ?? 14)) / 12));
   const m = fx.mark;
-  const X = m.x * s, Y = m.y * s, MW = m.w * s, MH = m.h * s;
+  const X = pic.x + m.x * s, Y = m.y * s, MW = m.w * s, MH = m.h * s;
+  // once the mark is drawn the camera pushes in on it and everything its pen draws (markReach)
+  const P = pushAt(lf, fx.push !== false ? pushWindow((fx.markAt ?? 14) + 10, len) : null, SHOT_W, dh, pic, clipBox(markReach(m.shape, X, Y, MW, MH), pic), kMax);
+  const sw = (w: number) => w * Math.pow(P.k, -0.7);   // the pen grows a little with the push, never to a fat band
   return (
-    <Card lf={lf} len={len} pad={20}>
-      <div style={{ position: 'relative', width: dw, height: dh, margin: '0 auto', borderRadius: 12, overflow: 'hidden' }}>
-        <Img src={staticFile(fx.src)} style={{ width: dw, height: dh, display: 'block' }} />
-        <svg width={dw} height={dh} style={{ position: 'absolute', inset: 0 }}>
-          {m.shape === 'circle' ? (
-            <ellipse cx={X + MW / 2} cy={Y + MH / 2} rx={MW / 2 + 14} ry={MH / 2 + 12} fill="none" stroke={ACCENT_ON_FOOTAGE} strokeWidth={7}
-              pathLength={1} strokeDasharray="1" strokeDashoffset={1 - draw} strokeLinecap="round" transform={`rotate(-4 ${X + MW / 2} ${Y + MH / 2})`} />
-          ) : m.shape === 'underline' ? (
-            <path d={`M ${X - 6} ${Y + MH + 10} Q ${X + MW / 2} ${Y + MH + 22} ${X + MW + 6} ${Y + MH + 8}`} fill="none" stroke={ACCENT_ON_FOOTAGE} strokeWidth={8}
-              pathLength={1} strokeDasharray="1" strokeDashoffset={1 - draw} strokeLinecap="round" />
-          ) : (
-            <g>
-              <path d={`M ${X + MW + 90} ${Y - 70} Q ${X + MW + 70} ${Y + MH / 2} ${X + MW + 10} ${Y + MH / 2}`} fill="none" stroke={ACCENT_ON_FOOTAGE} strokeWidth={8}
+    <Card lf={lf} len={len} pad={20} h={dh + 70} still>
+      <div style={{ position: 'relative', width: SHOT_W, height: dh, borderRadius: 12, overflow: 'hidden' }}>
+        <div style={camStyle(P)}>
+         <div style={{ position: 'absolute', left: pic.x, top: 0, width: pic.w, height: pic.h, borderRadius: 12, overflow: 'hidden' }}>{/* the pen stays on the picture */}
+          <Img src={staticFile(fx.src)} style={{ position: 'absolute', left: 0, top: 0, width: pic.w, height: pic.h }} />
+          <svg width={SHOT_W} height={dh} style={{ position: 'absolute', left: -pic.x, top: 0 }}>
+            {m.shape === 'circle' ? (
+              <ellipse cx={X + MW / 2} cy={Y + MH / 2} rx={MW / 2 + 14} ry={MH / 2 + 12} fill="none" stroke={ACCENT_ON_FOOTAGE} strokeWidth={sw(7)}
+                pathLength={1} strokeDasharray="1" strokeDashoffset={1 - draw} strokeLinecap="round" transform={`rotate(-4 ${X + MW / 2} ${Y + MH / 2})`} />
+            ) : m.shape === 'underline' ? (
+              <path d={`M ${X - 6} ${Y + MH + 10} Q ${X + MW / 2} ${Y + MH + 22} ${X + MW + 6} ${Y + MH + 8}`} fill="none" stroke={ACCENT_ON_FOOTAGE} strokeWidth={sw(8)}
                 pathLength={1} strokeDasharray="1" strokeDashoffset={1 - draw} strokeLinecap="round" />
-              <path d={`M ${X + MW + 30} ${Y + MH / 2 - 18} L ${X + MW + 8} ${Y + MH / 2} L ${X + MW + 30} ${Y + MH / 2 + 18}`} fill="none" stroke={ACCENT_ON_FOOTAGE}
-                strokeWidth={8} strokeLinecap="round" strokeLinejoin="round" opacity={draw > 0.95 ? 1 : 0} />
-            </g>
-          )}
-        </svg>
+            ) : (
+              <g>
+                <path d={`M ${X + MW + 90} ${Y - 70} Q ${X + MW + 70} ${Y + MH / 2} ${X + MW + 10} ${Y + MH / 2}`} fill="none" stroke={ACCENT_ON_FOOTAGE} strokeWidth={sw(8)}
+                  pathLength={1} strokeDasharray="1" strokeDashoffset={1 - draw} strokeLinecap="round" />
+                <path d={`M ${X + MW + 30} ${Y + MH / 2 - 18} L ${X + MW + 8} ${Y + MH / 2} L ${X + MW + 30} ${Y + MH / 2 + 18}`} fill="none" stroke={ACCENT_ON_FOOTAGE}
+                  strokeWidth={sw(8)} strokeLinecap="round" strokeLinejoin="round" opacity={draw > 0.95 ? 1 : 0} />
+              </g>
+            )}
+          </svg>
+         </div>
+        </div>
       </div>
-      <div style={{ fontFamily: SANS, fontSize: 18, color: CREME_DARK.inkDim, marginTop: 8 }}>{fx.source}</div>
+      <div style={SOURCE}>{fx.source}</div>
     </Card>
   );
 };
 
 /** A real screenshot with a highlighter swept across one line (same frame as live-markup). */
 const Highlighter: React.FC<{ fx: Extract<Effect, { kind: 'highlighter' }>; lf: number; len: number }> = ({ fx, lf, len }) => {
-  const viewW = BAND.w - 40, viewH = BAND.h - 70;
-  const s = Math.min(viewW / fx.w, viewH / fx.h);
-  const dw = fx.w * s, dh = fx.h * s;
+  const { s, dh, pic, kMax } = shotFrame(fx.w, fx.h);
   const sweep = easeOutCubic(clamp01((lf - (fx.markAt ?? 14)) / 10));
   const m = fx.mark;
+  const X = pic.x + m.x * s, Y = m.y * s;
+  // once the sweep lands the camera pushes in on the line
+  const P = pushAt(lf, fx.push !== false ? pushWindow((fx.markAt ?? 14) + 8, len) : null, SHOT_W, dh, pic,
+    clipBox({ x: X - 8, y: Y - 6, w: m.w * s + 16, h: m.h * s + 12 }, pic), kMax);
   return (
-    <Card lf={lf} len={len} pad={20}>
-      <div style={{ position: 'relative', width: dw, height: dh, margin: '0 auto', borderRadius: 12, overflow: 'hidden' }}>
-        <Img src={staticFile(fx.src)} style={{ width: dw, height: dh, display: 'block' }} />
-        <div style={{ position: 'absolute', left: m.x * s - 4, top: m.y * s - 2, width: (m.w * s + 8) * sweep, height: m.h * s + 4, background: ACCENT_ON_FOOTAGE,
-          opacity: 0.5, borderRadius: 4, transform: 'skewX(-6deg)' }} />
+    <Card lf={lf} len={len} pad={20} h={dh + 70} still>
+      <div style={{ position: 'relative', width: SHOT_W, height: dh, borderRadius: 12, overflow: 'hidden' }}>
+        <div style={camStyle(P)}>
+         <div style={{ position: 'absolute', left: pic.x, top: 0, width: pic.w, height: pic.h, borderRadius: 12, overflow: 'hidden' }}>
+          <Img src={staticFile(fx.src)} style={{ position: 'absolute', left: 0, top: 0, width: pic.w, height: pic.h }} />
+          <div style={{ position: 'absolute', left: X - pic.x - 4, top: Y - 2, width: (m.w * s + 8) * sweep, height: m.h * s + 4, background: ACCENT_ON_FOOTAGE,
+            opacity: 0.5, borderRadius: 4, transform: 'skewX(-6deg)' }} />
+         </div>
+        </div>
       </div>
-      <div style={{ fontFamily: SANS, fontSize: 18, color: CREME_DARK.inkDim, marginTop: 8 }}>{fx.source}</div>
+      <div style={SOURCE}>{fx.source}</div>
     </Card>
   );
 };

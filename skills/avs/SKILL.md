@@ -335,7 +335,17 @@ part of the edit, not one of the 20 effects, so they can still go in, except whe
   `giant-captions` (the words huge, one at a time), `icon-strike` (an icon struck
   through: megaphone, phone, calendar, clock, dollar, globe, pin, message, search, star, thumbsdown, ban), `page-scroll`
   and `live-markup` (a REAL screenshot they supplied under `public/proof/`, with a true source line; crop to the part
-  that matters), `keycaps` (2-8 keys), `receipt` (1-5 short lines, each on its word), `intertitle` (one line),
+  that matters). Both zoom in on their part so it reads on a phone: live-markup on its `mark` once it's drawn,
+  page-scroll on an optional `focus` `{"x", "y", "w", "h"}` in the screenshot's pixels, the part of the page the words
+  point at (a review, a price, a button), read off the screenshot the way a mark is. A focus takes whole lines, from
+  the left edge of the text to the end of its longest line, never part of a sentence: whatever lies outside it is cut
+  at the card's edge when the zoom lands. With a focus the page scrolls to
+  that part and zooms in, without one the whole page scrolls by. The zoom stops where the marked part fills the
+  card, or sooner on a small screenshot, so mark a short phrase, a button or a single review, not a whole line or
+  paragraph. A phone screenshot zooms furthest. Give each of the three about 2 seconds (60 frames): a shorter one
+  shows the mark or the scroll without zooming in. An optional `markAt` counts frames from the effect's own start
+  (default 14), never a frame of the whole video. `"push": false` on any of the three keeps that one from zooming in (they say "don't zoom in on
+  that"). `keycaps` (2-8 keys), `receipt` (1-5 short lines, each on its word), `intertitle` (one line),
   `counter` (one number they SAID, pops whole), `pie` (a share they SAID), `list-tracker` (`title` and 2-6 `items`
   each `{"t", "at"}`: "01/04" steps on each item's word and stays up. Keep items short, a few words each: a long one
   shrinks and wraps to fit), `snap-zoom` (`at` the frame of the word that
@@ -343,7 +353,7 @@ part of the edit, not one of the 20 effects, so they can still go in, except whe
   `pinned-line` (`text` up to 40 characters, usually the call to action, held long; it steps aside for other top-band
   effects; optional `y`, its centre in pixels; `"point": "down"` swaps the dot for a bouncing arrow toward the ad's
   button),
-  `highlighter` (like live-markup, a REAL capture, `mark` the line to sweep), `note-wall` (1-4 `notes` each
+  `highlighter` (like live-markup, a REAL capture, `mark` the line to sweep, then it zooms in on that line), `note-wall` (1-4 `notes` each
   `{"t", "at"}`; optional `y`, the wall's centre), `arrow-note` (a short handwritten `text` and the point `x`, `y` it arrows to, never into the face;
   optional `noteY`, the note's own centre),
   `comment-box` (their `keyword` types into a comment and a heart pops, `lead` "Comment": regular posts only, a paid ad

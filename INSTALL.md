@@ -14,7 +14,7 @@ then run it. They may not be technical. Never use sudo. Nothing here needs a pas
   (about 50 MB). Otherwise the folder came from a zip and may have landed somewhere else: Safari expands the
   zip into `~/Downloads/AVS` on its own, or the person may have unzipped it on the Desktop. If
   `runtime/` does not exist yet, move that folder to `~/AVS` (`mv ~/Downloads/AVS ~/AVS`) rather
-  than unzipping a second copy. If only the zip exists: `ditto -x -k ~/Downloads/AVS-2.1.0.zip ~`
+  than unzipping a second copy. If only the zip exists: `ditto -x -k ~/Downloads/AVS-2.2.0.zip ~`
   (it creates `~/AVS`). A Google Drive download may show a "can't scan for viruses" page first:
   that is normal for a 50 MB file, click Download anyway.
 - Tell the person: "Welcome to AVS. Setup takes up to an hour, mostly downloads and a test video. I'll ask you a

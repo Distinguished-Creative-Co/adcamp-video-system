@@ -31,8 +31,8 @@ def kinds(join_free):
         ('word-stamp', 40, {'word': 'website', 'tilt': -4}),
         ('giant-captions', 45, {}),
         ('icon-strike', 45, {'icon': 'globe', 'label': 'one fee', 'strikeAt': 20}),
-        ('page-scroll', 60, dict(PROOF, url='example.com')),
-        ('live-markup', 60, dict(PROOF, mark={'shape': 'circle', 'x': 60, 'y': 110, 'w': 500, 'h': 70}, markAt=15)),
+        ('page-scroll', 60, dict(PROOF, url='example.com', focus={'x': 60, 'y': 900, 'w': 700, 'h': 300}, push=True)),
+        ('live-markup', 60, dict(PROOF, mark={'shape': 'circle', 'x': 60, 'y': 110, 'w': 500, 'h': 70}, markAt=15, push=False)),
         ('keycaps', 45, {'keys': 'SITE'}),
         ('receipt', 60, {'title': 'One fee', 'lines': [{'t': 'One fee', 'value': '4', 'at': 10}, {'t': 'All the edits', 'at': 30}]}),
         ('intertitle', 45, {'text': 'Same four things'}),
@@ -43,7 +43,7 @@ def kinds(join_free):
         ('quote-card', 45, {'text': 'It does not have to work this way.', 'who': 'Four chiropractors'}),
         ('pinned-line', 60, {'text': 'DM me SITE', 'y': 300, 'point': 'down'}),
         ('cover-story', 60, {'title': 'Same four things', 'lines': ['One fee', 'No retainer'], 'strap': 'what they told me'}),
-        ('highlighter', 60, dict(PROOF, mark={'x': 60, 'y': 246, 'w': 600, 'h': 36}, markAt=15)),
+        ('highlighter', 60, dict(PROOF, mark={'x': 60, 'y': 246, 'w': 600, 'h': 36}, markAt=15, push=True)),
         ('note-wall', 60, {'notes': [{'t': 'The domain', 'at': 10}, {'t': 'The website', 'at': 30}], 'y': 500}),
         ('arrow-note', 45, {'text': 'Super Dad', 'x': 900, 'y': 400, 'noteY': 700}),
         ('comment-box', 45, {'keyword': 'SITE', 'lead': 'DM me'}),
@@ -74,7 +74,7 @@ def main():
         if start + n >= cfg['frames'] - 10:
             sys.exit('test_effect_kinds: %s is too short to hold every kind' % base)
         e = dict({'kind': kind, 'in': start, 'out': start + n}, **json.loads(json.dumps(f)))
-        for fld in ('strikeAt', 'markAt', 'at'):
+        for fld in ('at',):   # strikeAt and markAt count from the effect's own start
             if fld in e:
                 e[fld] += start
         for lst in ('items', 'lines', 'notes'):

@@ -82,8 +82,10 @@ export type Effect =
   | (FxBase & { kind: 'word-stamp'; word: string; tilt?: number })
   | (FxBase & { kind: 'giant-captions' })
   | (FxBase & { kind: 'icon-strike'; icon: 'megaphone' | 'ban' | 'calendar' | 'clock' | 'dollar' | 'globe' | 'pin' | 'message' | 'phone' | 'search' | 'star' | 'thumbsdown'; label?: string; strikeAt?: number })
-  | (FxBase & { kind: 'page-scroll'; src: string; w: number; h: number; url?: string; source: string })
-  | (FxBase & { kind: 'live-markup'; src: string; w: number; h: number; source: string; mark: { shape: 'circle' | 'underline' | 'arrow'; x: number; y: number; w: number; h: number }; markAt?: number })
+  // focus: the part of the page the words point at, in screenshot pixels: it scrolls there and the camera pushes in.
+  // push: false keeps the screenshot effects from pushing in (on by default for a mark, a line, or a focus)
+  | (FxBase & { kind: 'page-scroll'; src: string; w: number; h: number; url?: string; source: string; focus?: { x: number; y: number; w: number; h: number }; push?: boolean })
+  | (FxBase & { kind: 'live-markup'; src: string; w: number; h: number; source: string; mark: { shape: 'circle' | 'underline' | 'arrow'; x: number; y: number; w: number; h: number }; markAt?: number; push?: boolean })
   | (FxBase & { kind: 'keycaps'; keys: string })
   | (FxBase & { kind: 'receipt'; title?: string; lines: { t: string; value?: string; at: Frame }[] })
   | (FxBase & { kind: 'intertitle'; text: string })
@@ -94,7 +96,7 @@ export type Effect =
   | (FxBase & { kind: 'quote-card'; text: string; who?: string })                        // words someone said, typed on in quote marks
   | (FxBase & { kind: 'pinned-line'; text: string; y?: number; point?: 'down' })        // one short line pinned at the top (steps aside for other top-band effects); y: its centre, canvas px; point "down": a bouncing arrow instead of the dot
   | (FxBase & { kind: 'cover-story'; title: string; lines?: string[]; strap?: string })  // the frame as a magazine cover
-  | (FxBase & { kind: 'highlighter'; src: string; w: number; h: number; source: string; mark: { x: number; y: number; w: number; h: number }; markAt?: number })
+  | (FxBase & { kind: 'highlighter'; src: string; w: number; h: number; source: string; mark: { x: number; y: number; w: number; h: number }; markAt?: number; push?: boolean })
   | (FxBase & { kind: 'note-wall'; notes: { t: string; at: Frame }[]; y?: number })     // paper notes stick up around the head, one per beat; y: the wall's centre, canvas px
   | (FxBase & { kind: 'arrow-note'; text: string; x: number; y: number; noteY?: number }) // a handwritten note with an arrow drawn to (x, y); noteY: the note's centre, canvas px
   | (FxBase & { kind: 'comment-box'; keyword: string; lead?: string })                  // the keyword types into a comment field, a heart pops
@@ -472,6 +474,14 @@ export const validateReel = (c: ReelConfig): void => {
     if (e.kind === 'receipt' && (e.lines.length < 1 || e.lines.length > 5)) fail(id, `effect ${i}: receipt prints 1-5 lines`);
     if ((e.kind === 'page-scroll' || e.kind === 'live-markup') && !/^proof\/.+\.(png|jpe?g|webp)$/i.test(e.src)) fail(id, `effect ${i}: ${e.kind} src must be a real capture under proof/`);
     if (e.kind === 'pie' && (e.pct <= 0 || e.pct > 100)) fail(id, `effect ${i}: pie pct must be 1-100`);
+    // the camera push aims at a region of the screenshot: it has to be a real part of it
+    const inShot = (r: { x: number; y: number; w: number; h: number } | null, W: number, H: number) =>
+      !!r && typeof r === 'object' && [r.x, r.y, r.w, r.h].every((v) => typeof v === 'number' && Number.isFinite(v)) && r.w > 0 && r.h > 0 && r.x >= 0 && r.y >= 0 && r.x + r.w <= W && r.y + r.h <= H;
+    if (e.kind === 'page-scroll' && e.focus !== undefined && !inShot(e.focus, e.w, e.h)) fail(id, `effect ${i}: page-scroll focus must be a part of the screenshot (x, y, w, h inside its ${e.w}x${e.h})`);
+    if ((e.kind === 'page-scroll' || e.kind === 'live-markup' || e.kind === 'highlighter') && e.push !== undefined && typeof e.push !== 'boolean') fail(id, `effect ${i}: ${e.kind} push is true or false`);
+    // markAt counts frames from the effect's own start (default 14), never a frame of the whole reel
+    if ((e.kind === 'live-markup' || e.kind === 'highlighter') && e.markAt !== undefined && !(Number.isFinite(e.markAt) && e.markAt >= 0 && e.markAt < e.out - e.in))
+      fail(id, `effect ${i}: ${e.kind} markAt counts frames from the effect's start, 0 to ${e.out - e.in - 1}`);
   });
   if (c.thumbnail) {
     const t = c.thumbnail, n = t.back.trim().split(/\s+/).length;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { GOLD, ACCENT_ON_FOOTAGE } from '../vc/style';
 import { SANS, SANS_WIDTH, sansEms, accentFace, handFace, romanSerif } from '../vc/fonts';
-import { easeOutCubic } from '../../methodology/layout';
+import { drift, easeOutCubic } from '../../methodology/layout';
 import { arrowNoteTop, noteWallShift, pinnedTop } from '../../methodology/adsafe';
 import type { Effect } from '../../methodology/ReelConfig';
 
@@ -17,6 +17,9 @@ import type { Effect } from '../../methodology/ReelConfig';
  *   arrow-note    a handwritten note with an arrow drawn to a point on screen
  *   comment-box   the keyword types into a comment field, it posts, a heart pops
  *   lights-down   the room behind the host dims and softens for one line, the host stays lit (drawn in AvatarView: lightsDownAt)
+ * The plates, Pinned Line and Note Wall's notes breathe faintly while they hold (drift, layout.ts), with no will-change
+ * layer (see Card in Effects.tsx: a layer made frames depend on render order). Arrow Note does not: its arrow has to land
+ * on its target.
  */
 const BAND = { x: 160, y: 130, w: 760, h: 520 } as const;
 const PLATE = 'rgba(20,21,26,0.86)';
@@ -26,10 +29,11 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
 
 const Plate: React.FC<{ lf: number; len: number; top?: number; h?: number; children: React.ReactNode }> = ({ lf, len, top = BAND.y, h, children }) => {
   const { e, out } = env(lf, len);
+  const d = drift(lf);
   return (
     <div style={{ position: 'absolute', left: BAND.x, top, width: BAND.w, height: h, borderRadius: 28, background: PLATE, padding: '26px 34px',
       boxSizing: 'border-box', border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 24px 60px rgba(0,0,0,0.45)',
-      opacity: e * out, transform: `translateY(${(1 - e) * -30}px)` }}>{children}</div>
+      opacity: e * out, transform: `translateY(${(1 - e) * -30 + d.dy}px) scale(${d.scale})`, transformOrigin: '50% 0%' }}>{children}</div>
   );
 };
 
@@ -98,11 +102,12 @@ export const QuoteCard: React.FC<{ fx: Extract<Effect, { kind: 'quote-card' }>; 
 
 export const PinnedLine: React.FC<{ fx: Extract<Effect, { kind: 'pinned-line' }>; lf: number; len: number; away: number; paid?: boolean }> = ({ fx, lf, len, away, paid = false }) => {
   const { e, out } = env(lf, len, 8);
+  const d = drift(lf, 8);
   const hop = Math.abs(Math.sin((lf / 30) * Math.PI * 1.6)) * 9 - 4;   // point "down": the arrow hops toward the button below, about 1.6 times a second
   return (
     <div style={{ position: 'absolute', left: 0, right: 0, top: pinnedTop(paid, fx.y), display: 'flex', justifyContent: 'center', opacity: e * out * (1 - away) }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: PLATE, borderRadius: 999, padding: '12px 28px', border: '1px solid rgba(255,255,255,0.16)',
-        fontFamily: SANS, fontWeight: 800, fontSize: 34, color: '#fff', transform: `translateY(${(1 - e) * -20}px)` }}>
+        fontFamily: SANS, fontWeight: 800, fontSize: 34, color: '#fff', transform: `translateY(${(1 - e) * -20 + d.dy}px) scale(${d.scale})` }}>
         {fx.point === 'down' ? null : <span style={{ width: 14, height: 14, borderRadius: '50%', background: ACCENT_ON_FOOTAGE, display: 'inline-block' }} />}{fx.text}
         {fx.point === 'down' ? (
           <svg width={26} height={26} viewBox="0 0 24 24" style={{ transform: `translateY(${hop}px)` }}>
@@ -151,9 +156,10 @@ export const NoteWall: React.FC<{ fx: Extract<Effect, { kind: 'note-wall' }>; lf
         if (p <= 0) return null;
         const sp = SPOTS[i];
         const k = easeOutCubic(p);
+        const d = drift(f - n.at, 8, i * 0.27);   // each note breathes on its own beat
         return (
           <div key={i} style={{ position: 'absolute', left: sp.x, top: sp.y + shift, width: 300, minHeight: 150, padding: '34px 24px 22px', boxSizing: 'border-box',
-            background: '#F6EFD9', borderRadius: 6, boxShadow: '0 18px 40px rgba(0,0,0,0.45)', transform: `rotate(${sp.r * (2 - k)}deg) scale(${1.25 - 0.25 * k})`, opacity: k }}>
+            background: '#F6EFD9', borderRadius: 6, boxShadow: '0 18px 40px rgba(0,0,0,0.45)', transform: `translateY(${d.dy}px) rotate(${sp.r * (2 - k)}deg) scale(${(1.25 - 0.25 * k) * d.scale})`, opacity: k }}>
             <div style={{ position: 'absolute', top: -14, left: 110, width: 90, height: 30, background: 'rgba(255,255,255,0.55)', transform: 'rotate(-3deg)' }} />
             <div style={{ fontFamily: hand, fontWeight: 700, fontSize: Math.min(52, 470 / Math.max(n.t.length, 8) * 1.6), lineHeight: 1.05, color: '#1D1B17' }}>{n.t}</div>
           </div>

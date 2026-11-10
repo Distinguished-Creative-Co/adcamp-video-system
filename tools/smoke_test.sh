@@ -121,6 +121,8 @@ python3 scripts/test_cutter.py > "$T/cutter.log" 2>&1 || { cat "$T/cutter.log"; 
 echo "  OK cutter checks (several trims, breaths inside pauses, transitions apart)"
 python3 scripts/test_effect_kinds.py sample > "$T/kinds.log" 2>&1 || { cat "$T/kinds.log"; fail "a check could not read every effect kind"; }
 echo "  OK every effect kind, retired ones too, reads in the checks"
+node scripts/test_motion.mjs sample-big-energy > "$T/motion.log" 2>&1 || { cat "$T/motion.log"; fail "the zoom into screenshots or the drift on held graphics broke a rule"; }
+echo "  OK the zoom into screenshots and the drift on held graphics"
 python3 - <<'PAGES'
 import json
 p = open('qa/sample/storyboard/pane.html').read()

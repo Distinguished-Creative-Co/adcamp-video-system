@@ -159,21 +159,21 @@
   {
    "key": "page-scroll",
    "name": "Page Scroll",
-   "line": "Your web page scrolling by. Needs a screenshot from you.",
+   "line": "Your web page scrolls by, or stops on the part you mean and zooms in. Needs a screenshot from you.",
    "preview": "previews/effects/page-scroll.mp4",
    "poster": "previews/effects/page-scroll.jpg"
   },
   {
    "key": "live-markup",
    "name": "Live Markup",
-   "line": "A circle drawn on your screenshot. Needs a screenshot from you.",
+   "line": "A circle drawn on your screenshot, then a zoom in so it reads. Needs a screenshot from you.",
    "preview": "previews/effects/live-markup.mp4",
    "poster": "previews/effects/live-markup.jpg"
   },
   {
    "key": "highlighter",
    "name": "Highlighter",
-   "line": "A highlighter sweeps a line on your screenshot. Needs a screenshot from you.",
+   "line": "A highlighter sweeps a line on your screenshot, then zooms in. Needs a screenshot from you.",
    "preview": "previews/effects/highlighter.mp4",
    "poster": "previews/effects/highlighter.jpg"
   },
