@@ -158,7 +158,7 @@ def main():
     out_dir = os.path.join(ROOT, 'qa', name, 'storyboard')
     notes = os.path.join(out_dir, 'notes.json')
     if os.path.exists(notes) and not keep_notes:   # last round's notes were applied: keep them, but never let them count again
-        os.rename(notes, os.path.join(out_dir, 'notes-applied-%s.json' % datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
+        os.replace(notes, os.path.join(out_dir, 'notes-applied-%s.json' % datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
     fr_dir = os.path.join(out_dir, 'frames')
     if os.path.isdir(fr_dir):
         shutil.rmtree(fr_dir)

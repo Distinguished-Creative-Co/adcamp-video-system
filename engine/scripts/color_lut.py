@@ -31,10 +31,12 @@ def grade(src, dst, lut):
     want = {'lut': lut, 'src_size': os.path.getsize(src), 'src_mtime': int(os.path.getmtime(src))}
     if os.path.exists(dst) and os.path.exists(stamp) and json.load(open(stamp)) == want:
         return False
+    src, dst = os.path.abspath(src), os.path.abspath(dst)
     tmp = dst + '.part.mp4'
+    # a path relative to the folder ffmpeg runs in: a full Windows path's drive colon and backslashes break filter syntax
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', src, '-map', '0:v:0', '-map', '0:a?', '-vf',
-                    'lut3d=%s:interp=tetrahedral' % os.path.join(LUTS, lut + '.cube'), '-c:v', 'libx264', '-crf', '16',
-                    '-preset', 'medium', '-pix_fmt', 'yuv420p', '-c:a', 'copy', '-movflags', '+faststart', tmp], check=True)
+                    'lut3d=%s.cube:interp=tetrahedral' % lut, '-c:v', 'libx264', '-crf', '16',
+                    '-preset', 'medium', '-pix_fmt', 'yuv420p', '-c:a', 'copy', '-movflags', '+faststart', tmp], check=True, cwd=LUTS)
     os.replace(tmp, dst)
     json.dump(want, open(stamp, 'w'))
     return True

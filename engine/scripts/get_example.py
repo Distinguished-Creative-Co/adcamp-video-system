@@ -29,7 +29,8 @@ LOGIN_HINTS = ('login', 'log in', 'sign in', 'cookies', 'rate-limit', 'rate limi
 
 
 def ytdlp():
-    for c in (shutil.which('yt-dlp'), os.path.join(ROOT, '..', 'runtime', 'bin', 'yt-dlp'), os.path.expanduser('~/.local/bin/yt-dlp')):
+    exe = 'yt-dlp.exe' if sys.platform == 'win32' else 'yt-dlp'
+    for c in (shutil.which('yt-dlp'), os.path.join(ROOT, '..', 'runtime', 'bin', exe), os.path.expanduser('~/.local/bin/' + exe)):
         if c and os.path.isfile(c) and os.access(c, os.X_OK):
             return c
     return None

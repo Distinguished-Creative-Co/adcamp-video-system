@@ -102,7 +102,7 @@ def loudness(path):
 
 
 def words_of(path):
-    py = os.environ.get('AVS_PYTHON') or os.path.expanduser('"$AVS_PYTHON"')
+    py = os.environ.get('AVS_PYTHON') or sys.executable
     if not os.path.exists(py):
         return None
     code = ('import json,sys,faster_whisper as fw\n'

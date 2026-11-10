@@ -1,7 +1,7 @@
 {
   "name": "avs",
   "displayName": "AdCamp Video System",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Turns a phone video of you talking, plus your script, into a finished, captioned vertical video (Reels, Shorts, TikTok, Meta ads) on your own Mac.",
   "author": {
     "name": "Chris Serra"

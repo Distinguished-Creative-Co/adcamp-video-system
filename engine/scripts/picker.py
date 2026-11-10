@@ -34,6 +34,7 @@ import os
 import re
 import socket
 import subprocess
+import webbrowser
 import sys
 import threading
 import time
@@ -141,7 +142,7 @@ def pane():
         for it in st['catalog'].get(group, []):
             for k in ('preview', 'poster'):
                 if it.get(k):
-                    files[it[k]] = os.path.relpath(os.path.join(PAGE, it[k]), ROOT)
+                    files[it[k]] = os.path.relpath(os.path.join(PAGE, it[k]), ROOT).replace(os.sep, '/')   # saved data keeps forward slashes on every system
     for it in st['mine']:
         for k in ('preview', 'poster'):
             if it.get(k):
@@ -289,7 +290,7 @@ def main():
     url = 'http://127.0.0.1:%d/' % port
     say('PICKER READY %s' % url)
     if '--no-open' not in a:
-        subprocess.run(['open', url], check=False)
+        webbrowser.open(url)   # the default browser on a Mac or a PC (webbrowser, not the Mac's open)
     try:
         while not stop.wait(5):
             if time.time() - last['t'] > IDLE:

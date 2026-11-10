@@ -13,6 +13,7 @@ import sys
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REMOTION = ['node', os.path.join(ROOT, 'node_modules', '@remotion', 'cli', 'remotion-cli.js')]   # never npx: on Windows npx is a .cmd file, which Python cannot start by bare name
 PAIRS = {1: ('hanken', 'playfair'), 2: ('inter', 'instrument'), 3: ('montserrat', 'fraunces'), 4: ('dmsans', 'dmserif')}
 
 
@@ -31,7 +32,7 @@ def main():
     props = tempfile.NamedTemporaryFile('w', suffix='.json', delete=False)
     json.dump({'name': name, 'accent': accent}, props)
     props.close()
-    p = subprocess.run(['npx', 'remotion', 'still', 'src/methodology/index.ts', 'FontSheet', out, '--props=' + props.name, '--log=error'],
+    p = subprocess.run(REMOTION + ['still', 'src/methodology/index.ts', 'FontSheet', out, '--props=' + props.name, '--log=error'],
                        cwd=ROOT, capture_output=True, text=True)
     os.remove(props.name)
     if p.returncode != 0:

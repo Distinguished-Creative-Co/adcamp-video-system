@@ -13,13 +13,15 @@ AVS turns a phone video of you talking (plus your script, if you have one) into 
 
 ## Install
 
-1. Easiest: in the Claude desktop app's Code tab, click the **+** next to the message box, then **Plugins**, **Browse plugins**, **Add**, **Add marketplace**, **Add from a repository**. Paste `https://github.com/Distinguished-Creative-Co/adcamp-video-system`, click **Sync**, install **AdCamp Video System**, start a new chat and say "Set up AVS". Or start a new chat in the Code tab and paste this, exactly:
+1. Easiest: in the Claude desktop app's Code tab, start a new chat and paste this, exactly:
 
 ```
 Install AdCamp Video System for me from https://github.com/Distinguished-Creative-Co/adcamp-video-system into ~/AVS (download it as a tar.gz with curl, not with git), then open ~/AVS/INSTALL.md and follow it step by step. Tell me what each step downloads and how big it is before it starts, and ask me before anything that needs an account, a password, or a choice from me.
 ```
 
-2. If you have the zip instead (`AVS-2.2.0.zip`, from a link Chris shared), put it in Downloads and say: "Install AdCamp Video System from ~/Downloads/AVS-2.2.0.zip into ~/AVS, then follow ~/AVS/INSTALL.md". A Google Drive link may show a "can't scan for viruses" page first: that's normal for a 50 MB file, click Download anyway.
+   Or from the Plugins panel: click the **+** next to the message box, then **Plugins**, **Browse plugins**, **Add**, **Add marketplace**, **Add from a repository**. Paste `https://raw.githubusercontent.com/Distinguished-Creative-Co/adcamp-video-system/main/marketplace.json`, click **Sync**, install **AdCamp Video System**, start a new chat and say "Set up AVS". If Sync says the marketplace already exists, they added it before: go back to **Browse plugins** and install from there. Neither way needs git or any developer tools, and Claude asks their OK before each step.
+
+2. If you have the zip instead (`AVS-2.2.1.zip`, from a link Chris shared), put it in Downloads and say: "Install AdCamp Video System from ~/Downloads/AVS-2.2.1.zip into ~/AVS, then follow ~/AVS/INSTALL.md". A Google Drive link may show a "can't scan for viruses" page first: that's normal for a 50 MB file, click Download anyway.
 3. Before installing, Claude shows you the terms and waits for your yes. The one that matters: **Remotion** (the video renderer) is free for individuals and for companies with up to 3 employees. A company with 4 or more employees needs a paid Remotion company license (remotion.pro).
 4. Claude runs each step, says what it downloads and how big it is, and asks for your choices: your brand color, a font pair, and the name, handle and photo for your follow card. Expect a permission prompt from Claude Code for each command. You can approve them one by one, or choose the option that allows them for the AVS folder so it stops asking.
 5. It makes a test video from the included sample in Clean Talk, one of the four starter looks (10 to 15 minutes, longer on Intel), and plays it in the chat.

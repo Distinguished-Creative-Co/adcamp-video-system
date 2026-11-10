@@ -19,12 +19,15 @@ import json
 import os
 import re
 import shutil
+import pathlib
 import subprocess
+import webbrowser
 import sys
 import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
+REMOTION = ['node', os.path.join(ROOT, 'node_modules', '@remotion', 'cli', 'remotion-cli.js')]   # never npx: on Windows npx is a .cmd file, which Python cannot start by bare name
 sys.path.insert(0, HERE)
 import reel_config  # noqa: E402
 import styles_lib as L  # noqa: E402
@@ -119,10 +122,12 @@ def cmd_frames(a):
     if os.path.exists(hi):
         src = hi
     lut = cfg.get('color') or 'natural'   # the reel's color look on the stills too (the graded copies may be cleaned up)
-    vf = ('lut3d=%s:interp=tetrahedral,' % os.path.join(ROOT, 'luts', lut + '.cube') if lut != 'natural' else '') + 'scale=1080:-2'
+    # a path relative to the folder ffmpeg runs in: a full Windows path's drive colon and backslashes break filter syntax
+    vf = ('lut3d=luts/%s.cube:interp=tetrahedral,' % lut if lut != 'natural' else '') + 'scale=1080:-2'
+    src = os.path.abspath(src)
     for t in ats:
-        dst = os.path.join(out, 'assets', 'f%05.1f.jpg' % t)
-        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-ss', '%.2f' % t, '-i', src, '-frames:v', '1', '-vf', vf, '-q:v', '2', dst], check=True)
+        dst = os.path.abspath(os.path.join(out, 'assets', 'f%05.1f.jpg' % t))
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-ss', '%.2f' % t, '-i', src, '-frames:v', '1', '-vf', vf, '-q:v', '2', dst], check=True, cwd=ROOT)
         print('carousel: %s' % os.path.relpath(dst, out))
 
 
@@ -268,7 +273,7 @@ def cmd_render(a):
     props = tempfile.NamedTemporaryFile('w', suffix='.json', delete=False)
     json.dump({'doc': doc}, props)
     props.close()
-    cmd = ['npx', 'remotion', 'render', 'src/methodology/index.ts', 'Carousel', out, '--sequence', '--image-format=png',
+    cmd = REMOTION + ['render', 'src/methodology/index.ts', 'Carousel', out, '--sequence', '--image-format=png',
            '--props=' + props.name, '--public-dir=' + d, '--log=error']
     p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
     os.remove(props.name)
@@ -287,7 +292,7 @@ def cmd_render(a):
     for n in notes:
         print('note: ' + n)
     if '--no-open' not in a and '--pane' not in a:
-        subprocess.run(['open', os.path.join(d, 'preview.html')], check=False)
+        webbrowser.open(pathlib.Path(os.path.join(d, 'preview.html')).resolve().as_uri())   # the default browser on a Mac or a PC (webbrowser, not the Mac's open)
 
 
 def main():
@@ -295,7 +300,7 @@ def main():
     if not a or a[0] not in ('new', 'frames', 'check', 'render', 'open') or len(a) < 2:
         sys.exit(__doc__)
     if a[0] == 'open':
-        subprocess.run(['open', os.path.join(folder(a[1]), 'preview.html')], check=False)
+        webbrowser.open(pathlib.Path(os.path.join(folder(a[1]), 'preview.html')).resolve().as_uri())
         return
     {'new': cmd_new, 'frames': cmd_frames, 'check': cmd_check, 'render': cmd_render}[a[0]](a)
 

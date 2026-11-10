@@ -38,6 +38,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
+REMOTION = ['node', os.path.join(ROOT, 'node_modules', '@remotion', 'cli', 'remotion-cli.js')]   # never npx: on Windows npx is a .cmd file, which Python cannot start by bare name
 sys.path.insert(0, HERE)
 import reel_config  # noqa: E402
 import styles_lib as L  # noqa: E402
@@ -315,7 +316,7 @@ def drawn_rows(cfg, cover):
 
 def still(rid, out_png):
     env = dict(os.environ)
-    p = subprocess.run(['npx', 'remotion', 'still', 'src/methodology/index.ts', rid, out_png, '--frame=0', '--public-dir=public', '--log=error'],
+    p = subprocess.run(REMOTION + ['still', 'src/methodology/index.ts', rid, out_png, '--frame=0', '--public-dir=public', '--log=error'],
                        cwd=ROOT, capture_output=True, text=True, env=env)
     if p.returncode != 0:
         sys.exit('cover_options: could not draw %s: %s' % (rid, (p.stderr or p.stdout)[:400]))

@@ -149,7 +149,7 @@ def do_search(vibe, n):
             os.remove(full)
             continue
         named = os.path.join(CAND, '%s.%s' % (short, real_ext(full)))
-        os.rename(full, named)
+        os.replace(full, named)   # replace, not rename: on Windows a rename onto an existing file fails
         full = named
         start = min(max(first_loud(full), 0.0), max(0.0, dur - 20))
         snip = os.path.join(CAND, '%s-snippet.m4a' % short)
@@ -160,7 +160,7 @@ def do_search(vibe, n):
         kept.append({'id': short, 'title': title, 'creator': (r.get('creator') or 'unknown').strip(),
                      'license': r['license'], 'license_name': ('CC BY %s' % ver).strip() if r['license'] == 'by' else ('CC0' if r['license'] == 'cc0' else 'Public Domain Mark'),
                      'license_url': r.get('license_url') or '', 'source_url': r.get('foreign_landing_url') or r['url'], 'provider': r.get('source') or '',
-                     'file': os.path.relpath(full, ROOT), 'snippet': os.path.relpath(snip, ROOT), 'seconds': round(dur, 1),
+                     'file': os.path.relpath(full, ROOT).replace(os.sep, '/'), 'snippet': os.path.relpath(snip, ROOT).replace(os.sep, '/'), 'seconds': round(dur, 1),
                      'music_start': round(start, 1), 'vibe': vibe})
     json.dump(kept, open(os.path.join(CAND, 'candidates.json'), 'w'), indent=1)
     if not kept:

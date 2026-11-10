@@ -25,6 +25,7 @@ import json
 import os
 import socket
 import subprocess
+import webbrowser
 import sys
 import threading
 import time
@@ -132,9 +133,10 @@ def colors(video_jpg):
     src = video_jpg if video_jpg and os.path.exists(video_jpg) else os.path.join(PAGE, 'previews', 'styles', 'clean-talk.jpg')
     out = []
     for c in idx:
-        jpg = os.path.join(OUT, 'color-%s.jpg' % c['key'])
-        vf = 'scale=270:-2' + ('' if c['key'] == 'natural' else ',lut3d=%s' % os.path.join(ROOT, 'luts', c['key'] + '.cube'))
-        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', src, '-vf', vf, '-q:v', '4', jpg], check=False)
+        jpg = os.path.abspath(os.path.join(OUT, 'color-%s.jpg' % c['key']))
+        # a path relative to the folder ffmpeg runs in: a full Windows path's drive colon and backslashes break filter syntax
+        vf = 'scale=270:-2' + ('' if c['key'] == 'natural' else ',lut3d=luts/%s.cube' % c['key'])
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.abspath(src), '-vf', vf, '-q:v', '4', jpg], check=False, cwd=ROOT)
         if os.path.exists(jpg):
             out.append(dict(c, poster='color-%s.jpg' % c['key']))
     return out
@@ -436,7 +438,7 @@ def serve(a):
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     say('START PAGE http://127.0.0.1:%d/' % port)
     if '--no-open' not in a:
-        subprocess.run(['open', 'http://127.0.0.1:%d/' % port], check=False)
+        webbrowser.open('http://127.0.0.1:%d/' % port)   # the default browser on a Mac or a PC (webbrowser, not the Mac's open)
     t0 = time.time()
     while not stop.wait(5):
         if time.time() - t0 > 3600:

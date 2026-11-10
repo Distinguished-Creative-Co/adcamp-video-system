@@ -1,0 +1,19 @@
+{
+  "name": "adcamp",
+  "owner": {
+    "name": "Chris Serra"
+  },
+  "description": "AdCamp Video System by Chris Serra.",
+  "plugins": [
+    {
+      "name": "avs",
+      "version": "2.2.1",
+      "description": "Turns a phone video of you talking, plus your script, into a finished, captioned vertical video (Reels, Shorts, TikTok, Meta ads) on your own Mac.",
+      "source": {
+        "source": "archive",
+        "sha256": "ad8c5d08d299d89a9782802c52cc052c57e0e94649c679ca2044e248f9bc9bc8",
+        "url": "https://github.com/Distinguished-Creative-Co/adcamp-video-system/releases/download/v2.2.1/AVS-2.2.1-plugin.zip"
+      }
+    }
+  ]
+}
