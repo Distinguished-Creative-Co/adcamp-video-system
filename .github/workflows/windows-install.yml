@@ -43,6 +43,28 @@ jobs:
             ${{ runner.temp }}/Jane Doe/AVS/engine/script/sample-takes.md
             ${{ runner.temp }}/Jane Doe/AVS/engine/script/word-timings
             ${{ runner.temp }}/Jane Doe/AVS/engine/qa/sample/seams.json
+  windows-plugin-add:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: the live Windows marketplace link installs the plugin, with no git on PATH (Windows PowerShell 5.1)
+        shell: powershell
+        run: |
+          $node = (Get-Command node).Source
+          $pre = Join-Path $env:RUNNER_TEMP 'cc'
+          & (Join-Path (Split-Path $node) 'npm.cmd') install --silent --no-audit --no-fund --prefix $pre '@anthropic-ai/claude-code'
+          $claude = Join-Path $pre 'node_modules\.bin\claude.cmd'
+          $env:CLAUDE_CONFIG_DIR = Join-Path $env:RUNNER_TEMP 'cfg'
+          $env:Path = 'C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;' + (Split-Path $node)
+          if (Get-Command git -ErrorAction SilentlyContinue) { Write-Host 'git is still on PATH'; exit 1 }
+          & $claude plugin marketplace add 'https://raw.githubusercontent.com/Distinguished-Creative-Co/adcamp-video-system/windows-preview/marketplace.json'
+          if ($LASTEXITCODE -ne 0) { Write-Host 'FAILED marketplace add'; exit 1 }
+          & $claude plugin install 'avs@adcamp-windows-preview'
+          if ($LASTEXITCODE -ne 0) { Write-Host 'FAILED plugin install'; exit 1 }
+          $b = Get-ChildItem -Recurse -Path (Join-Path $env:CLAUDE_CONFIG_DIR 'plugins\cache\adcamp-windows-preview') -Filter 'bootstrap.ps1' | Select-Object -First 1
+          if (-not $b) { Write-Host 'FAILED the plugin files are missing'; exit 1 }
+          Write-Host ('OK the plugin installed with no git: {0}, version {1}' -f $b.DirectoryName, (Get-Content (Join-Path $b.DirectoryName 'VERSION')))
+
   windows-planted-failures:
     runs-on: windows-latest
     timeout-minutes: 20
