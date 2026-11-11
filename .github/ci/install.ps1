@@ -8,6 +8,11 @@ if ($LASTEXITCODE -ne 0) { exit 1 }
 $installed = $LASTEXITCODE
 & "$A\avs.cmd" doctor | Tee-Object -FilePath (Join-Path $env:RUNNER_TEMP 'doctor.txt')
 $doc = $LASTEXITCODE
+# the update check reads the live windows-preview line, never main: a fresh install of this version hears there is nothing newer
+$uc = (& "$A\avs.cmd" update --check 2>&1 | Out-String).Trim()
+Write-Host "update check: $uc"
+$upd = 1
+if ($uc -match '^UPDATE NONE') { $upd = 0 }
 $smoke = 0
 if ($installed -eq 0 -and $doc -eq 0) {
   & "$A\avs.cmd" smoke 2>&1 | Tee-Object -FilePath (Join-Path $env:RUNNER_TEMP 'smoke.txt')
@@ -21,5 +26,5 @@ $sz = (Get-ChildItem -LiteralPath $A -Recurse -Force -ErrorAction SilentlyContin
 Get-ChildItem -LiteralPath ([Environment]::GetFolderPath('Desktop')) -Filter 'AVS-report-*.txt' | Copy-Item -Destination "$A\runtime\logs\" -ErrorAction SilentlyContinue
 $lint = 1
 if ($installed -eq 0 -and $doc -eq 0) { & powershell -NoProfile -ExecutionPolicy Bypass -File "$env:GITHUB_WORKSPACE\.github\ci\skill-lint.ps1"; $lint = $LASTEXITCODE }
-Write-Host "install exit $installed, doctor exit $doc, smoke exit $smoke, skill lint exit $lint"
-if ($installed -ne 0 -or $doc -ne 0 -or $smoke -ne 0 -or $lint -ne 0) { exit 1 }
+Write-Host "install exit $installed, doctor exit $doc, update check $upd, smoke exit $smoke, skill lint exit $lint"
+if ($installed -ne 0 -or $doc -ne 0 -or $upd -ne 0 -or $smoke -ne 0 -or $lint -ne 0) { exit 1 }
