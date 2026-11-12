@@ -32,6 +32,7 @@ import os
 import re
 import subprocess
 import sys
+import unicodedata
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import hostcut  # noqa: E402
@@ -61,6 +62,7 @@ ALIASES = {'chatgbt': 'chatgpt', 'chatgtp': 'chatgpt', 'chatgbd': 'chatgpt', 'ch
 
 
 def norm(tok):
+    tok = ''.join(c for c in unicodedata.normalize('NFKD', tok) if not unicodedata.combining(c))   # é -> e: Héctor matches Hector
     t = re.sub(r'[^a-z0-9]', '', tok.lower())
     t = NUMWORDS.get(t, t)
     return ALIASES.get(t, t)
@@ -111,7 +113,7 @@ def script_units(text):
             s = s.strip()
             if not s:
                 continue
-            toks = [norm(t) for t in re.findall(r"[A-Za-z0-9][A-Za-z0-9'\-]*", s)]
+            toks = [norm(t) for t in re.findall(r"[^\W_](?:[^\W_]|['\u2019\-])*", s)]   # any letter, so Héctor stays one word
             toks = [t for t in toks if t]
             if toks:
                 units.append({'id': len(units), 'para': pi, 'text': s, 'toks': toks})

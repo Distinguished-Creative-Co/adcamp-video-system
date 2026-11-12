@@ -13,14 +13,19 @@ import difflib
 import json
 import re
 import sys
+import unicodedata
 
 MIN_PHRASE_S = 1.0
 
-# a comma-grouped number ("4,000") is one token; then a word; then a punctuation run
-_TOKEN = re.compile(r"\d{1,3}(?:,\d{3})+(?!\d)|[A-Za-z0-9][A-Za-z0-9'\-]*|[,.?!]+")
+# a comma-grouped number ("4,000") is one token; then a word; then a punctuation run. A word is any letter or digit
+# (so Héctor, niños and café stay whole) with apostrophes, straight or curly (it’s from a phone or a doc), and hyphens
+_TOKEN = re.compile(r"\d{1,3}(?:,\d{3})+(?!\d)|[^\W_](?:[^\W_]|['\u2019\-])*|[,.?!]+")
 
 
 def _clean(text):
+    """The match key: accents folded (é -> e, ñ -> n) on both sides, so Héctor in the script meets Hector or Héctor
+    in the transcript, then only a-z and 0-9."""
+    text = ''.join(c for c in unicodedata.normalize('NFKD', text) if not unicodedata.combining(c))
     return re.sub(r'[^a-z0-9]', '', text.lower())
 
 

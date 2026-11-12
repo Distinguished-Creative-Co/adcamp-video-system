@@ -57,8 +57,8 @@ https://raw.githubusercontent.com/Distinguished-Creative-Co/adcamp-video-system/
 Set up AVS
 ```
 
-If you have the zip instead (`AVS-2.2.1.zip`), put it in Downloads and say "Install AdCamp Video System from
-~/Downloads/AVS-2.2.1.zip into ~/AVS, then follow ~/AVS/INSTALL.md".
+If you have the zip instead (`AVS-2.2.2.zip`), put it in Downloads and say "Install AdCamp Video System from
+~/Downloads/AVS-2.2.2.zip into ~/AVS, then follow ~/AVS/INSTALL.md".
 
 Claude walks you through everything, shows you your name in four font pairs so you can pick, makes a test video,
 helps you set your look, then gets you straight into your first video.

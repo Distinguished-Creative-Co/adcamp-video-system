@@ -14,6 +14,7 @@ import math
 import os
 import re
 import sys
+import unicodedata
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -38,7 +39,7 @@ def main():
     new_ref = reel_config.load(words_from)
     ow = [w for w in old['words'] if w['t']]
     nw = [w for w in new_ref['words'] if w['t']]
-    key = lambda w: re.sub(r'[^a-z0-9]', '', w['t'].lower())  # noqa: E731
+    key = lambda w: re.sub(r'[^a-z0-9]', '', ''.join(c for c in unicodedata.normalize('NFKD', w['t']) if not unicodedata.combining(c)).lower())  # noqa: E731  (é -> e)
     sm = difflib.SequenceMatcher(a=[key(w) for w in ow], b=[key(w) for w in nw], autojunk=False)
     omap = {}
     for blk in sm.get_matching_blocks():

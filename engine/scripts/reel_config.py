@@ -16,6 +16,7 @@ import os
 import re
 import subprocess
 import sys
+import unicodedata
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FPS = 30
@@ -151,17 +152,19 @@ def timeline_errors(cfg):
         shown += [txt(it) for it in e.get('items') or []]
         if e.get('kind') == 'pie' and not e.get('value'):
             shown.append('%s%%' % e.get('pct'))
-    said = set(re.sub(r"[^a-z0-9']", '', w['t'].lower().replace('\u2019', "'")) for w in words)
+    # a word's key: curly apostrophe made straight, accents folded (é -> e), so Héctor on screen meets Hector said
+    said_key = lambda t: re.sub(r"[^a-z0-9']", '', ''.join(c for c in unicodedata.normalize('NFKD', t) if not unicodedata.combining(c)).lower().replace('\u2019', "'"))  # noqa: E731
+    said = set(said_key(w['t']) for w in words)
     # member installs (AVS_HOME set) have no claims guard: what they put on screen is theirs to say (Chris, 2026-10-25)
     guard = not os.environ.get('AVS_HOME')
     cvb = (cfg.get('cover') or {}).get('back')   # a cover's words behind the host are spoken words, like back text
     for b in ((cfg.get('backText') or []) + ([{'text': th['back']}] if th.get('back') else []) + ([{'text': cvb}] if cvb else [])) if guard else []:
         for t in b['text'].split():
-            if re.sub(r"[^a-z0-9']", '', t.lower().replace('\u2019', "'")) not in said:
+            if said_key(t) not in said:
                 errs.append('back text "%s": "%s" is never spoken in the reel' % (b['text'], t))
     for e in (cfg.get('effects') or []) if guard else []:
         if e.get('kind') == 'word-stamp':
-            t = re.sub(r"[^a-z0-9']", '', e['word'].lower().replace('\u2019', "'"))
+            t = said_key(e['word'])
             if t and t not in said:
                 errs.append('word-stamp "%s" is never spoken in the reel' % e['word'])
     for txt in shown if guard else []:
