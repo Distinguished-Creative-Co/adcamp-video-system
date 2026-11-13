@@ -20,14 +20,16 @@ video. This file tells you what to do when you open this folder.
 
 ## Installed (`runtime/.installed` exists, written when the install test passes)
 
-`runtime/base` without `runtime/.installed`: run `avs doctor`. All OK and `engine/out/sample.mp4` exists (an
-install whose test video rendered): `avs flag installed`. Otherwise setup stopped partway: continue
+`runtime/base` without `runtime/.installed`: run `avs doctor`. It ends with "All set" (its test video passed):
+`avs flag installed`. Otherwise setup stopped partway: continue
 `INSTALL.md` from step 1.
 
 - Never move or rename this folder: its runtime records its paths.
 - To make a video, the person puts their clip and script in `inbox/` and says "make a reel".
   The Claude Code skill `avs` runs the engine; its rules are in `engine/CLAUDE.md`.
 - Something broken: `avs doctor` says what is missing and which step fixes it.
+- Never change AVS's own scripts, tools, engine code or settings to get past a failure, not one number, and never offer
+  to. Run the step once more, then stop and say what stopped. The skill's rules list the few files a request may change.
 - New version: `avs update --latest` (from GitHub) or `avs update <path to a new zip>` keeps their reels, brand, music and styles.
   `avs update --check` says whether there is one (the skill runs it at the start of each chat).
 - Installed from the Plugins panel (`runtime/.via-plugin` exists): the skill comes from the plugin, not ~/.claude/skills.

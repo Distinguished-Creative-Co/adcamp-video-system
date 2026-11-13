@@ -2,7 +2,8 @@
 
 You are installing AdCamp Video System for the person you are talking to, on a Windows PC. Follow these steps in
 order. Keep each update to the person short and plain: what the step does, how big the download is, then run it. They
-may not be technical. Never ask for an administrator, never install other software, never change a Windows setting.
+may not be technical. Never ask for an administrator, never install other software, never change a Windows setting,
+and never change AVS's own files to get a step through.
 The one exception the person handles themselves: Microsoft's free Visual C++ runtime, when the PC check says it's
 missing.
 
@@ -26,8 +27,8 @@ splits it): write it to a file in your scratchpad and pass `@file=<that file>` t
 - The lines to say to the person come from "What the member hears" in the AVS skill. If the skill isn't loaded in this
   chat (they pasted the install line), read that section of `~/AVS/skills/avs/SKILL.md` now.
 - Then the bootstrap, which checks the chip and fetches uv and AVS's own Python (about 50 MB):
-  `powershell -NoProfile -ExecutionPolicy Bypass -File "$HOME\AVS\bootstrap.ps1"`. It stops on an ARM PC with one
-  plain line: say the ARM line from the AVS skill and stop.
+  `powershell -NoProfile -ExecutionPolicy Bypass -File "$HOME\AVS\bootstrap.ps1"`. It stops on an ARM PC, or one
+  with under 8 GB of memory, with one plain line: say that line from the AVS skill and stop.
 - Tell the person the Windows welcome from the AVS skill ("Welcome to AVS. On Windows this is a preview: ...") and wait
   for their go. Then, on its own line: "Claude Code asks your permission before each step. I'll say what each one does
   first, so say yes when it matches."
@@ -57,8 +58,8 @@ A second failure of the same step: stop, run `avs report`, and say the step-fail
 is safe to re-run, and finished ones go quickly.
 
 1. `avs install --step check` (no download): the chip, Windows version, disk, memory and Microsoft's Visual C++ runtime. A stop: say its
-   line from the AVS skill (an ARM chip, not enough space, the runtime with the link it printed) and stop there. Its
-   memory note: say once that videos will take longer.
+   line from the AVS skill (an ARM chip, under 8 GB of memory, not enough space, the runtime with the link it printed)
+   and stop there. Its memory note (8 to 15 GB): say once that videos will take longer.
 2. `avs install --step uv`
 3. `avs install --step python`
 4. `avs install --step node`
@@ -95,7 +96,7 @@ is safe to re-run, and finished ones go quickly.
     exactly."
 14. `avs install --step env`
 15. `avs install --step skill` (from the Plugins panel it just confirms the plugin provides the skill).
-16. Run `avs doctor`. All OK: say "Everything's installed." Anything else: fix what it names, then tell them in
+16. Run `avs doctor`. All OK (its test video row says NOT YET until section 2): say "Everything's installed." Anything else: fix what it names, then tell them in
     one plain sentence what was missing and that it's sorted.
 
 Their antivirus removed a tool (a step that just passed now fails with a missing file, or the antivirus says so): "Your
@@ -117,7 +118,10 @@ Nothing is stuck, I'll tell you when it's ready." Run it in the background and c
 copy (`avs phone-copy out/sample.mp4`), put it in the chat (SendUserFile, display render, else
 `avs open out/sample-phone.mp4`) and say: "Here's a test video, in Clean Talk, one of four starter looks. Next, yours."
 (A dark brand color: the words show in a lighter shade of it, as you told them at the brand step.)
-If it fails, read the last 20 lines and run `avs doctor` yourself, fix what you can and run it once more. A second
+If it fails, read the last 20 lines (all of it is kept in `runtime/logs/test-video.log`, and `avs doctor` shows
+the result) and run `avs doctor` yourself, fix what you can without changing AVS's own files and run it once more. Out of
+memory: the skill's out-of-memory line, then stop. A test video row that says NO RESULT
+means a run started and hasn't ended: if it is still running, wait for it. Start it again only once nothing is running. A second
 failure: run `avs report` and say the test-failed line from the AVS skill.
 
 ## 2b. Their look (always, before the hand-off)

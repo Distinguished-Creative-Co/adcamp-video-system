@@ -13,10 +13,11 @@ import json
 import os
 import re
 import sys
+import unicodedata
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-norm = lambda t: re.sub(r"[^a-z0-9']", '', t.lower())  # noqa: E731
+norm = lambda t: re.sub(r"[^a-z0-9']", '', ''.join(c for c in unicodedata.normalize('NFKD', t) if not unicodedata.combining(c)).lower())  # noqa: E731  (é -> e)
 
 
 def words(path):

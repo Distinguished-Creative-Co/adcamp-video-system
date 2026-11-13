@@ -12,12 +12,14 @@ import os
 import json
 import re
 import sys
+import unicodedata
 
 MINLEN = 4       # this many consecutive matching words count as a repeat
 WINDOW = 12.0    # the second saying must start within this many seconds of the first
 
 
 def norm(w):
+    w = ''.join(c for c in unicodedata.normalize('NFKD', w) if not unicodedata.combining(c))   # é -> e
     return re.sub(r'[^a-z0-9]', '', w.lower())
 
 

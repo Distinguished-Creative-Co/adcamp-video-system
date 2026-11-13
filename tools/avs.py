@@ -50,6 +50,7 @@ UVX = os.path.join(BIN, 'uv' + P.EXE)
 WHISPERX, MATTE, YTDLP_VENV = os.path.join(RT, 'whisperx'), os.path.join(RT, 'matte'), os.path.join(RT, 'ytdlp')
 MODELS = os.path.join(RT, 'models')
 REMOTION = os.path.join(ENG, 'node_modules', '@remotion', 'cli', 'remotion-cli.js')
+MIN_RAM_GB = 7.5   # an 8 GB PC: making a video runs the renderer and the speech tools at the same time
 FONTS_SANS = ('hanken', 'inter', 'montserrat', 'dmsans', 'poppins')
 FONTS_SERIF = ('playfair', 'instrument', 'dmserif', 'fraunces')
 
@@ -157,6 +158,10 @@ def step_check(a):
         if ver[2] < 17763:
             raise Fail('%s is too old. AVS needs Windows 10 version 1809 or newer.' % words)
         ok('%s, %s chip' % (words, 'Intel or AMD'))
+        ram = P.ram_gb()
+        if 0 < ram < MIN_RAM_GB:   # before the C++ runtime line, so nobody installs that for a PC AVS can't use
+            raise Fail('this PC has %.0f GB of memory. AVS needs at least 8 GB (16 recommended), because making a video runs the '
+                       'renderer and the speech tools at the same time. Setup stopped here.' % ram)
         missing = P.cpp_runtime_missing()
         if missing:
             raise Fail('this PC is missing Microsoft\'s free Visual C++ runtime (%s), which the speech and cutout libraries need. '
@@ -556,6 +561,10 @@ def rows():
     r = []
     free = P.free_gb(AVS)
     r.append(('disk', free >= 5, '%.0f GB free%s' % (free, '' if free >= 5 else ' (keep 5+ GB for renders)')))
+    ram = P.ram_gb()
+    low = P.WIN and 0 < ram < MIN_RAM_GB
+    r.append(('memory', not low, '%.0f GB%s' % (ram, ': AVS needs at least 8 GB (16 recommended)' if low else
+                                                ', under 16 GB: videos take longer' if 0 < ram < 15 else '')))
     if P.WIN:
         m = P.cpp_runtime_missing()
         r.append(('C++ runtime', not m, 'present' if not m else 'missing %s: install %s' % (', '.join(m), P.CPP_RUNTIME_URL)))
@@ -588,20 +597,60 @@ def rows():
     return r
 
 
+def steps():
+    """steps.log as a list of entries, oldest first."""
+    sl = os.path.join(RT, 'steps.log')
+    out = []
+    for l in (open(sl, encoding='utf-8', errors='replace').readlines() if os.path.exists(sl) else []):
+        try:
+            out.append(json.loads(l))
+        except ValueError:
+            pass
+    return out
+
+
+def test_video():
+    """(state, words) for the last test video: passed, failed, started (no result: still running, or it stopped partway) or none."""
+    last = ([e for e in steps() if e.get('step') == 'test-video'] or [None])[-1]
+    if last is None:   # an install from before results were kept: the mark is only written when the test passed
+        return ('passed', 'passed') if os.path.exists(os.path.join(RT, '.installed')) else ('none', 'not run yet (the last setup step: avs smoke)')
+    if last.get('ok') is True:
+        return 'passed', 'passed %s' % last.get('time', '')[:10]
+    if last.get('ok') is False:
+        return 'failed', 'failed %s, %s' % (last.get('time', '')[:16].replace('T', ' '), last.get('note', ''))
+    return 'started', 'started %s with no result: still running, or it stopped partway' % last.get('time', '')[:16].replace('T', ' ')
+
+
 def doctor(a):
     name, ver, words = P.system()
     print('AVS %s on %s, %s' % (open(os.path.join(AVS, 'VERSION')).read().strip() if os.path.exists(os.path.join(AVS, 'VERSION')) else '?', words, P.native_machine()))
-    bad = 0
+    bad = []
     for n, good, d in rows():
-        print('  %-8s %-18s %s' % ('OK' if good else 'MISSING', n, d))
-        bad += 0 if good or n == 'reel downloader' else 1
+        print('  %-9s %-18s %s' % ('OK' if good else 'TOO LOW' if n == 'memory' else 'MISSING', n, d))
+        if not good and n != 'reel downloader':
+            bad.append(n)
     try:
         b = json.load(open(os.path.join(ENG, 'src', 'brand.json'), encoding='utf-8'))
         print('  brand: accent %s, sans %s, serif %s' % (b['accent'], b['sans'], b['serif']))
     except (OSError, ValueError, KeyError):
         pass
-    print('\nAll set. In Claude Code: "make a reel".' if not bad else '\nSomething is missing: run the step shown.')
-    return 1 if bad else 0
+    tv, said = test_video()
+    print('  %-9s %-18s %s' % ({'passed': 'OK', 'failed': 'FAILED', 'started': 'NO RESULT', 'none': 'NOT YET'}[tv], 'test video', said))
+    if bad:
+        print('\nThis PC has under 8 GB of memory, so AVS can\'t make videos on it.' if bad == ['memory'] else
+              '\nSomething is missing: run the step shown.')
+        return 1
+    if tv == 'passed':
+        print('\nAll set. In Claude Code: "make a reel".')
+        return 0
+    if tv == 'none':   # setup's own checkup comes before the test video: everything it installs is there
+        print('\nEverything is installed. The last setup step is the test video: avs smoke')
+        return 0
+    if tv == 'started':   # a run in the background reads the same until it ends: never start a second one
+        print('\nThe test video has no result yet. If it is still running, wait for it. If it stopped, run it again: avs smoke')
+        return 1
+    print('\nThe test video did not pass, so setup is not done. Run it again: avs smoke')
+    return 1
 
 
 def preflight(a):
@@ -621,18 +670,33 @@ def report(a):
         print('\nsteps.log (last 40):')
         sl = os.path.join(RT, 'steps.log')
         print(''.join(open(sl, encoding='utf-8').readlines()[-40:]) if os.path.exists(sl) else '  none yet')
-        for e in (json.loads(l) for l in (open(sl, encoding='utf-8').readlines() if os.path.exists(sl) else [])):
-            if not e.get('ok'):
-                lg = os.path.join(LOGS, e['step'] + '.log')
+        latest = {}
+        for e in steps():
+            latest[e.get('step')] = e
+        for st, e in latest.items():   # a step whose latest try did not pass (the test video too): the end of its log
+            if e.get('ok') is not True and st:
+                lg = os.path.join(LOGS, st + '.log')
                 if os.path.exists(lg):
-                    print('\n--- runtime/logs/%s.log (last 30) ---' % e['step'])
-                    print(''.join(open(lg, encoding='utf-8', errors='replace').readlines()[-30:]))
+                    n = 80 if st == 'test-video' else 30
+                    text = open(lg, encoding='utf-8', errors='replace').read().replace('\r\n', '\n')
+                    lines = [x.rsplit('\r', 1)[-1] for x in text.split('\n')]   # a progress bar keeps only its last state
+                    print('\n--- runtime/logs/%s.log (last %d) ---' % (st, n))
+                    print('\n'.join(lines[-n:]))
     out = os.path.join(P.desktop(), 'AVS-report-%s.txt' % datetime.datetime.now().strftime('%Y%m%d-%H%M'))
     text = buf.getvalue()
     home = os.path.expanduser('~')
-    win = home.replace('/', '\\')
-    for h in (win.replace('\\', '\\\\'), win, home.replace('\\', '/')):   # their name never leaves the PC in a path, JSON-escaped ones included
-        text = text.replace(h, '~')
+    homes = [home.replace('/', '\\')]
+    if P.WIN:   # the short form too (C:\Users\JANEDO~1), which temp folders and older tools print
+        try:
+            import ctypes
+            b = ctypes.create_unicode_buffer(1024)
+            if ctypes.windll.kernel32.GetShortPathNameW(homes[0], b, 1024) and b.value and b.value != homes[0]:
+                homes.append(b.value)
+        except Exception:
+            pass
+    for win in homes:
+        for h in (win.replace('\\', '\\\\'), win, win.replace('\\', '/')):   # their name never leaves the PC in a path, JSON-escaped ones included
+            text = text.replace(h, '~')
     open(out, 'w', encoding='utf-8').write(text)
     print('Report saved: %s' % out)
     return 0

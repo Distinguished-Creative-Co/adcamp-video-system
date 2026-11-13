@@ -96,8 +96,14 @@ def free_gb(path):
 
 
 def ram_gb():
+    """The memory installed, in GB (the number Windows Settings shows). AVS_TEST_RAM_GB stands in for it in the tests."""
+    if os.environ.get('AVS_TEST_RAM_GB'):
+        return float(os.environ['AVS_TEST_RAM_GB'])
     try:
         if WIN:
+            kb = ctypes.c_ulonglong(0)
+            if ctypes.windll.kernel32.GetPhysicallyInstalledSystemMemory(ctypes.byref(kb)) and kb.value:
+                return kb.value / 2 ** 20
             class M(ctypes.Structure):
                 _fields_ = [('dwLength', ctypes.c_ulong), ('dwMemoryLoad', ctypes.c_ulong), ('ullTotalPhys', ctypes.c_ulonglong),
                             ('ullAvailPhys', ctypes.c_ulonglong), ('ullTotalPageFile', ctypes.c_ulonglong), ('ullAvailPageFile', ctypes.c_ulonglong),

@@ -26,6 +26,14 @@ Write-Host "== bootstrap: AVS's own Python, which runs the setup steps"
 $arch = if ($env:PROCESSOR_ARCHITEW6432) { $env:PROCESSOR_ARCHITEW6432 } else { $env:PROCESSOR_ARCHITECTURE }
 $osArch = try { [string][System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture } catch { '' }   # also right when this shell runs emulated
 if ($arch -match 'ARM' -or $osArch -match 'Arm') { Stop-Avs 'this PC has an ARM chip (like a Snapdragon laptop). AVS for Windows needs an Intel or AMD PC for now.' }
+$ramGb = 0   # the memory installed, as Windows Settings shows it (AVS_TEST_RAM_GB stands in for it in the tests)
+if ($env:AVS_TEST_RAM_GB) { $ramGb = [double]$env:AVS_TEST_RAM_GB } else {
+  try { $ramGb = [double]((Get-CimInstance Win32_PhysicalMemory -ErrorAction Stop | Measure-Object -Property Capacity -Sum).Sum) / 1GB } catch { }
+  if (-not $ramGb) { try { $ramGb = [double](Get-CimInstance Win32_ComputerSystem -ErrorAction Stop).TotalPhysicalMemory / 1GB } catch { } }
+}
+if ($ramGb -gt 0 -and $ramGb -lt 7.5) {
+  Stop-Avs ('this PC has {0:N0} GB of memory. AVS needs at least 8 GB (16 recommended), because making a video runs the renderer and the speech tools at the same time. Nothing was downloaded.' -f $ramGb)
+}
 if (-not (Get-Command curl.exe -ErrorAction SilentlyContinue) -or -not (Get-Command tar.exe -ErrorAction SilentlyContinue)) {
   Stop-Avs 'this Windows is missing curl.exe or tar.exe. AVS needs Windows 10 version 1803 or newer.'
 }

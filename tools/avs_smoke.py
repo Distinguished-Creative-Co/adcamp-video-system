@@ -5,6 +5,8 @@ chat). Takes 10 to 15 minutes on a Mac, longer on a PC. Safe to run again.
 The sample is a real reel its owner already approved, so this test approves its own previews. Your own reels always
 wait for YOUR approval.
 """
+import codecs
+import datetime
 import filecmp
 import glob
 import json
@@ -433,10 +435,49 @@ def part4(T):
     must(code(CLEANUP), '')
 
 
+PARTS = {'1/4': 'cutting the sample', '2/4': 'the render', '3/4': 'the second look', '4/4': 'the tool checks'}
+
+
+def recorded(argv):
+    """Runs the test in a child process: its output shows as it comes and is kept in runtime/logs/test-video.log, and the
+    result goes in steps.log, where avs doctor and avs report read it. A run that never finishes leaves its start there."""
+    os.makedirs(A.LOGS, exist_ok=True)
+    log = os.path.join(A.LOGS, 'test-video.log')
+    A.log_step('test-video', None, 0, 'started')
+    t0 = time.time()
+    e = dict(os.environ, AVS_SMOKE_CHILD='1', PYTHONUNBUFFERED='1')
+    dec = codecs.getincrementaldecoder('utf-8')('replace')
+    with open(log, 'w', encoding='utf-8', errors='replace') as f:
+        f.write('AVS test video, %s, %s GB of memory\n' % (datetime.datetime.now().strftime('%Y-%m-%d %H:%M'), '%.0f' % P.ram_gb()))
+        p = subprocess.Popen([sys.executable, os.path.abspath(__file__)] + list(argv), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=e)
+        while True:
+            b = os.read(p.stdout.fileno(), 65536)
+            if not b:
+                break
+            t = dec.decode(b)
+            sys.stdout.write(t)
+            sys.stdout.flush()
+            f.write(t)
+            f.flush()
+        rc = p.wait()
+    text = open(log, encoding='utf-8', errors='replace').read().replace('\r\n', '\n')
+    lines = [x.rsplit('\r', 1)[-1].strip() for x in text.split('\n')]
+    lines = [x for x in lines if x]
+    if rc == 0:
+        A.log_step('test-video', True, time.time() - t0, 'passed')
+        return 0
+    part = ([x[3:6] for x in lines if x.startswith('== ') and x[3:6] in PARTS] or [''])[-1]
+    where = 'at %s (%s): ' % (part, PARTS[part]) if part else ''
+    A.log_step('test-video', False, time.time() - t0, where + (lines[-1] if lines else 'no output, exit code %d' % rc))
+    return rc
+
+
 def main(argv):
     if argv and argv[0] in ('-h', '--help'):
         print(__doc__.strip())
         return 0
+    if os.environ.get('AVS_SMOKE_CHILD') != '1':
+        return recorded(argv)
     if not os.path.exists(P.venv_python(A.WHISPERX)):
         print('error: AVS is not installed. Run: avs install --all')
         return 1
@@ -473,3 +514,7 @@ def main(argv):
     print('\nInstall test passed in about %d min. The test video (Clean Talk) is %s' % (mins, E(ENG, 'out', 'sample.mp4')))
     print('Open the folder: avs open out')
     return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

@@ -17,6 +17,9 @@ $smoke = 0
 if ($installed -eq 0 -and $doc -eq 0) {
   & "$A\avs.cmd" smoke 2>&1 | Tee-Object -FilePath (Join-Path $env:RUNNER_TEMP 'smoke.txt')
   $smoke = $LASTEXITCODE
+  # the result is kept: after a pass the checkup says so (a failed test video can never read All set)
+  $after = (& "$A\avs.cmd" doctor 2>&1 | Out-String)
+  if ($smoke -eq 0 -and ($after -notmatch 'OK\s+test video\s+passed' -or $after -notmatch 'All set')) { Write-Host $after; Write-Host 'the passed test video is not on the checkup'; $smoke = 1 }
   $o = "$A\engine\out"
   if (Test-Path -LiteralPath "$o\sample.mp4") { & "$A\runtime\bin\ffmpeg.exe" -v error -y -i "$o\sample.mp4" -vf scale=720:1280 -c:v libx264 -crf 24 -c:a aac -b:a 128k -movflags +faststart "$o\sample-phone.mp4" }
 }

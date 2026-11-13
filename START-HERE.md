@@ -43,7 +43,8 @@ you or your videos is sent.
 ## What you need
 
 - A Windows PC: Windows 11, or Windows 10 version 1809 or newer, with an Intel or AMD chip, and about 12 GB free.
-  16 GB of memory is recommended. With 8 GB it works, but videos take longer, and that hasn't been tested yet.
+  At least 8 GB of memory, and 16 GB is recommended. With 8 GB videos take longer, and that hasn't been tested yet.
+  Under 8 GB, setup stops at the first check, before downloading anything.
   PCs with an ARM chip (like a Snapdragon laptop) aren't supported.
 - Microsoft's free Visual C++ runtime. Most PCs already have it. If yours doesn't, AVS stops at the first check and
   gives you Microsoft's link. Installing it may ask for the PC's admin password (on a work PC, ask whoever looks after it).

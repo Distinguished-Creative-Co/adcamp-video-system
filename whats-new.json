@@ -4,5 +4,7 @@
  "2.1.0": "New: Lights Down dims the room behind you for one line. A simpler effects page, and three covers to pick from on your storyboard. iPhone HDR video no longer comes out blown out. Plus more fixes.",
  "2.2.0": "Your screenshots can now zoom in on the part you're talking about, so it reads on a phone. Graphics that stay on screen move a little, so they never look frozen.",
  "2.2.1": "Optional update. It only makes installing easier for new members. Your videos, brand and looks stay exactly as they are.",
- "0.9.0": "The Windows preview of AVS. A test computer installs it and makes the test video every time AVS changes, and few people have used it on a real PC yet."
+ "2.2.2": "Names and words with accents, like José, Héctor or café, now show whole in your captions. Words like it's, typed on a phone or in Google Docs, no longer break in two.",
+ "0.9.0": "The Windows preview of AVS. A test computer installs it and makes the test video every time AVS changes, and few people have used it on a real PC yet.",
+ "0.9.1": "Setup now stops at the first check on a PC with under 8 GB of memory, before downloading anything. The setup checkup now shows whether the test video passed, and the AVS report includes its log when it fails. Names and words with accents now show whole in captions."
 }
