@@ -7,12 +7,12 @@
   "plugins": [
     {
       "name": "avs",
-      "version": "2.2.2",
+      "version": "2.2.3",
       "description": "Turns a phone video of you talking, plus your script, into a finished, captioned vertical video (Reels, Shorts, TikTok, Meta ads) on your own Mac.",
       "source": {
         "source": "archive",
-        "sha256": "e2ce6d177a5798c152683938047dfdd9b70c65563346537da8b77760cc635d54",
-        "url": "https://github.com/Distinguished-Creative-Co/adcamp-video-system/releases/download/v2.2.2/AVS-2.2.2-plugin.zip"
+        "sha256": "7a6a83ad4b25f4b1aca0d32bd8c3201d68dd6f0f4a148a684c6437b93b284e11",
+        "url": "https://github.com/Distinguished-Creative-Co/adcamp-video-system/releases/download/v2.2.3/AVS-2.2.3-plugin.zip"
       }
     }
   ]

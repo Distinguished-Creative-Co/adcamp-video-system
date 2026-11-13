@@ -87,6 +87,7 @@ the lines for each moment. Say them in these words or close to them, filling in 
 - A cover changed by a switch to or from a paid ad (`COVER C CHANGED`): "A paid ad can't have words behind you, so your
   cover is now <the title> on its own." Going back to a regular post: "Your words behind you are back on the cover."
 - A snag you can fix: "Hit a snag on that step. Fixing it." A snag only they can fix: one plain sentence on what you need.
+- Out of memory (a step stops with a memory error or "Killed"): stop there. "Your Mac ran out of memory on that step. Close your other apps, then say try again." A second time: "Your Mac doesn't have enough memory for this step. Post what happened in the AdCamp community." Never get it through by changing AVS (the rule below).
 
 Rules:
 - Never show file names, folder paths, commands, STATUS lines, scene maps, takes tables or check results. Only when
@@ -97,6 +98,12 @@ Rules:
   video", "the page beside the chat". The storyboard's labels (Part 01, Part 02) are fine, since they see them.
 - Paths only when they ask where something is. Otherwise offer to open the folder.
 - When a check fails, fix it first and tell them only what changes for them.
+- Never change how AVS runs to get past a failure. Its scripts, tools, engine code and settings stay as installed, and
+  each step runs with the options these instructions give: not one number changed (a batch size, a timeout, a model),
+  and never offered as a choice. This rule wins over every "fix it" line here. A fix can only be running the step once
+  more, or a change to the video itself that its section describes (a time, a cut, a word in its config or script).
+  After that one rerun fails, or the member's "try again" fails, stop, say the snag line or the out-of-memory line, and
+  leave AVS as it was.
 
 ## Pages beside the chat (the pane)
 

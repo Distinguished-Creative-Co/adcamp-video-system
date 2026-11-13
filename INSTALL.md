@@ -14,7 +14,7 @@ then run it. They may not be technical. Never use sudo. Nothing here needs a pas
   (about 50 MB). Otherwise the folder came from a zip and may have landed somewhere else: Safari expands the
   zip into `~/Downloads/AVS` on its own, or the person may have unzipped it on the Desktop. If
   `runtime/` does not exist yet, move that folder to `~/AVS` (`mv ~/Downloads/AVS ~/AVS`) rather
-  than unzipping a second copy. If only the zip exists: `ditto -x -k ~/Downloads/AVS-2.2.2.zip ~`
+  than unzipping a second copy. If only the zip exists: `ditto -x -k ~/Downloads/AVS-2.2.3.zip ~`
   (it creates `~/AVS`). A Google Drive download may show a "can't scan for viruses" page first:
   that is normal for a 50 MB file, click Download anyway.
 - Tell the person: "Welcome to AVS. Setup takes up to an hour, mostly downloads and a test video. I'll ask you a
@@ -41,7 +41,7 @@ Long steps: venv, npm, models, cutout, browser and the test video each take minu
 (or with the longest timeout) and check back, so a time limit never cuts one off midway. A cut-off step is safe to
 run again.
 If a step FAILS, read the message, fix the cause if it's on this Mac (disk space, network), and
-re-run the same step. Every step is safe to re-run, and finished ones go quickly.
+re-run the same step. Never change AVS's own files to get a step through. Every step is safe to re-run, and finished ones go quickly.
 
 1. `check` (no download). If disk space fails, tell them how much to free up and stop.
 2. `node`
@@ -95,8 +95,8 @@ longer on an Intel Mac). Run it in the background and check back. When it passes
 (`. ~/AVS/runtime/env.sh && ffmpeg -y -i ~/AVS/engine/out/sample.mp4 -vf scale=540:960 -crf 30 -c:a aac -b:a 96k ~/AVS/engine/out/sample-phone.mp4`),
 put it in the chat (SendUserFile, display render, else `open` it) and say: "Here's a test video, in Clean Talk, one of
 four starter looks. Next, yours." (A dark brand color: the words show in a lighter shade of it, as you told them at the brand step.)
-If it fails, read the last 20 lines and run `~/AVS/tools/doctor.sh` yourself, fix what you can, and tell them in one plain
-sentence what happened and what you're doing about it.
+If it fails, read the last 20 lines and run `~/AVS/tools/doctor.sh` yourself, fix what you can without changing AVS's own files, and tell them in one plain
+sentence what happened and what you're doing about it. Out of memory: the skill's out-of-memory line, then stop.
 
 ## 2b. Their look (always, before the hand-off)
 

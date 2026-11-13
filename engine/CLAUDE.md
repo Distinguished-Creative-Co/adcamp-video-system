@@ -1,6 +1,8 @@
 # CLAUDE.md: operating the AdCamp Video System
 
-You DRIVE this engine through its scripts. Never hand-edit engine source to make one video work.
+You DRIVE this engine through its scripts. Never hand-edit engine source to make one video work, and never change a
+script, tool or setting to get past a failure, not one number (a batch size, a timeout, a model). Never offer that as a
+choice either. A step that runs out of memory stops there: the skill's out-of-memory line says what to tell the person.
 The skill `avs` sequences the work; these are the rules it relies on.
 
 ## Hard rules
