@@ -245,6 +245,9 @@ def part1():
     os.makedirs(E(ENG, 'script', 'word-timings'), exist_ok=True)
     shutil.copy2(E(ENG, 'samples', 'sample.txt'), E(ENG, 'script', 'sample.txt'))
     shutil.copy2(E(ENG, 'samples', 'sample-trims.json'), E(ENG, 'script', 'word-timings', 'sample-trims.json'))
+    # a run that stopped after step 2 leaves its cover C pick behind (step 4 clears it at the end), and the storyboard
+    # would carry that pick onto the fresh config below, so fill_sample could not find the cover line it fills
+    rm('qa/sample/covers.json', 'qa/sample/covers-given.json', 'qa/sample/storyboard/covers')
     reel(RAW, 'sample', '--face', '510,760', '--outdoor', '--regen', '--preview')   # --regen: always a fresh config
     print('(Expected on this first pass: NOT READY, the copy is blank and a few breaths between takes are flagged. The next steps set the look, fill the copy and sign off those breaths.)')
     os.makedirs(E(ENG, 'qa', 'sample'), exist_ok=True)
@@ -443,6 +446,8 @@ def recorded(argv):
     result goes in steps.log, where avs doctor and avs report read it. A run that never finishes leaves its start there."""
     os.makedirs(A.LOGS, exist_ok=True)
     log = os.path.join(A.LOGS, 'test-video.log')
+    if os.path.exists(log):   # the try before keeps its log, so a second run never wipes the reason the first one stopped
+        os.replace(log, os.path.join(A.LOGS, 'test-video-previous.log'))
     A.log_step('test-video', None, 0, 'started')
     t0 = time.time()
     e = dict(os.environ, AVS_SMOKE_CHILD='1', PYTHONUNBUFFERED='1')

@@ -20,6 +20,19 @@ if ($installed -eq 0 -and $doc -eq 0) {
   # the result is kept: after a pass the checkup says so (a failed test video can never read All set)
   $after = (& "$A\avs.cmd" doctor 2>&1 | Out-String)
   if ($smoke -eq 0 -and ($after -notmatch 'OK\s+test video\s+passed' -or $after -notmatch 'All set')) { Write-Host $after; Write-Host 'the passed test video is not on the checkup'; $smoke = 1 }
+  # running it again after a run that stopped in step 4: plant what that run leaves behind (the sample's three covers
+  # with C picked, cleared only at the end of step 4), then the test must pass again and keep the first run's log
+  if ($smoke -eq 0) {
+    & "$A\avs.cmd" run cover_options.py sample --options qa/sample/covers-given.json | Out-Null
+    & "$A\avs.cmd" run cover_options.py sample --pick c | Out-Null
+    if (-not (Test-Path -LiteralPath "$A\engine\qa\sample\covers.json")) { Write-Host 'the planted cover pick is missing'; $smoke = 1 }
+    else {
+      & "$A\avs.cmd" smoke 2>&1 | Tee-Object -FilePath (Join-Path $env:RUNNER_TEMP 'smoke-again.txt')
+      if ($LASTEXITCODE -ne 0) { Write-Host 'the test failed when run again after a stopped run'; $smoke = 1 }
+      elseif (-not (Test-Path -LiteralPath "$A\runtime\logs\test-video-previous.log")) { Write-Host 'the first run log was not kept'; $smoke = 1 }
+      else { Write-Host 'run again after a stopped run: passed, first run log kept' }
+    }
+  }
   $o = "$A\engine\out"
   if (Test-Path -LiteralPath "$o\sample.mp4") { & "$A\runtime\bin\ffmpeg.exe" -v error -y -i "$o\sample.mp4" -vf scale=720:1280 -c:v libx264 -crf 24 -c:a aac -b:a 128k -movflags +faststart "$o\sample-phone.mp4" }
 }

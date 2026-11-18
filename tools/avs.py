@@ -682,6 +682,12 @@ def report(a):
                     lines = [x.rsplit('\r', 1)[-1] for x in text.split('\n')]   # a progress bar keeps only its last state
                     print('\n--- runtime/logs/%s.log (last %d) ---' % (st, n))
                     print('\n'.join(lines[-n:]))
+                prev = os.path.join(LOGS, 'test-video-previous.log')
+                if st == 'test-video' and os.path.exists(prev):   # the try before this one, which may have stopped somewhere else
+                    text = open(prev, encoding='utf-8', errors='replace').read().replace('\r\n', '\n')
+                    lines = [x.rsplit('\r', 1)[-1] for x in text.split('\n')]
+                    print('\n--- runtime/logs/test-video-previous.log (last 40) ---')
+                    print('\n'.join(lines[-40:]))
     out = os.path.join(P.desktop(), 'AVS-report-%s.txt' % datetime.datetime.now().strftime('%Y%m%d-%H%M'))
     text = buf.getvalue()
     home = os.path.expanduser('~')

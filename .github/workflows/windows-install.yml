@@ -33,8 +33,7 @@ jobs:
             ${{ runner.temp }}/Jane Doe/AVS/runtime/env.json
             ${{ runner.temp }}/Jane Doe/AVS/engine/out/setup-check.png
             ${{ runner.temp }}/smoke.txt
-            ${{ runner.temp }}/Jane Doe/AVS/engine/out/sample.mp4
-            ${{ runner.temp }}/smoke.txt
+            ${{ runner.temp }}/smoke-again.txt
             ${{ runner.temp }}/Jane Doe/AVS/engine/out/sample.mp4
             ${{ runner.temp }}/Jane Doe/AVS/engine/out/sample-phone.mp4
             ${{ runner.temp }}/Jane Doe/AVS/engine/qa/sample/stills/sheet.png
