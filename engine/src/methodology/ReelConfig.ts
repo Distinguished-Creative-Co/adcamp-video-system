@@ -107,6 +107,25 @@ export type Effect =
   | { kind: 'transition'; at: Frame; style: 'whip' | 'zoom' | 'spin' | 'iris' | 'bars' | 'flash' };
 export const TOP_BAND_FX = ['icon-strike', 'page-scroll', 'live-markup', 'keycaps', 'receipt', 'intertitle', 'counter', 'pie', 'word-stamp',
   'list-tracker', 'quote-card', 'cover-story', 'highlighter', 'note-wall', 'arrow-note', 'comment-box'] as const;
+/** A word as the captions compare it: lower case, letters and digits only ("Save," -> "save", "$200" -> "200"). */
+export const bareWord = (t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, '');
+/** The words a graphic puts on screen at `frame` (the words behind the host, a stamp, a big number, typed keys). The
+ *  captions never lift the same word at that moment: one word headlined twice at once reads as a mistake, so the
+ *  caption's emphasis moves to another word or steps back (Chris, 2026-11-23). */
+export const graphicWords = (c: ReelConfig, frame: number): string[] => {
+  const out: string[] = [];
+  const add = (s?: string) => { for (const t of (s ?? '').replace(/==/g, '').split(/\s+/)) { const b = bareWord(t); if (b) out.push(b); } };
+  for (const b of c.backText ?? []) if (frame >= b.in && frame < b.out) add(b.text);
+  for (const e of c.effects ?? []) {
+    if (e.kind === 'transition' || frame < e.in || frame >= e.out) continue;
+    if (e.kind === 'word-stamp') add(e.word);
+    else if (e.kind === 'counter') { add(e.value); add(e.label); }
+    else if (e.kind === 'keycaps') add(e.keys);
+    else if (e.kind === 'comment-box') add(e.keyword);
+    else if (e.kind === 'giant-number') add(e.value);
+  }
+  return out;
+};
 /** Camera punch from cfg.zooms at `frame`: eases to each entry's scale over 4 frames, holds. */
 export const zoomAt = (c: ReelConfig, frame: number) => {
   const z = c.zooms ?? [];

@@ -275,8 +275,9 @@ def step_ffmpeg(a):
         os.remove(arc)
     else:
         arch = 'arm64' if P.native_machine() == 'arm64' else 'amd64'
-        for t in ('ffmpeg', 'ffprobe'):
-            z = fetch('https://ffmpeg.martin-riedl.de/redirect/latest/macos/%s/release/%s.zip' % (arch, t), os.path.join(RT, 'dl', t + '.zip'), None, 'ffmpeg')
+        build, sha_ffmpeg, sha_ffprobe = P.FFMPEG_MAC[arch]
+        for t, sha in (('ffmpeg', sha_ffmpeg), ('ffprobe', sha_ffprobe)):
+            z = fetch('https://ffmpeg.martin-riedl.de/download/macos/%s/%s/%s.zip' % (arch, build, t), os.path.join(RT, 'dl', t + '.zip'), sha, 'ffmpeg')
             unpack(z, BIN)
             os.chmod(os.path.join(BIN, t), 0o755)
             os.remove(z)

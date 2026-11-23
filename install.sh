@@ -99,14 +99,24 @@ step_node(){
 step_ffmpeg(){
   say "ffmpeg: video and audio processing"
   if ffmpeg_ok; then ok "ffmpeg already installed at $(command -v ffmpeg)"; return; fi
+  # pinned (2026-11-23): "latest" moved to 9.1 on Nov 20 and the test video then cut differently and failed its sound
+  # check. 9.0.2 is the build every install test passed with. Each zip is checked against its published sha256.
+  local build; [ "$FF_ARCH" = arm64 ] && build=1789931890_9.0.2 || build=1789931006_9.0.2
   for t in ffmpeg ffprobe; do
-    fetch "https://ffmpeg.martin-riedl.de/redirect/latest/macos/${FF_ARCH}/release/${t}.zip" "$RT/dl/${t}.zip"
+    fetch "https://ffmpeg.martin-riedl.de/download/macos/${FF_ARCH}/${build}/${t}.zip" "$RT/dl/${t}.zip"
+    local want; case "$FF_ARCH-$t" in
+      arm64-ffmpeg)  want=c8ed4c4e6978a03c485edbfe4e0a5dc2380f8a30bba5150531b31b094492d924;;
+      arm64-ffprobe) want=fcbe839537485eaee7a7a8bc5cbc0f90d53617e80943e8a5b2e31cb851197ea6;;
+      amd64-ffmpeg)  want=7c6b4125b191cbf773832dc51f424cf2b6bb7da43007d1e066f95909e47cacd4;;
+      amd64-ffprobe) want=2322438ed2f6319a691291b247d09c69dcaa3a982460d1f269a7e1af335cfdfd;;
+    esac
+    [ "$(shasum -a 256 "$RT/dl/${t}.zip" | cut -c1-64)" = "$want" ] || { rm -f "$RT/dl/${t}.zip"; die "the $t download did not pass its checksum, so it was not used"; }
     unzip -o -q "$RT/dl/${t}.zip" -d "$RT/bin"
     chmod +x "$RT/bin/$t"
   done
   rm -f "$RT/dl/ffmpeg.zip" "$RT/dl/ffprobe.zip"
   ffmpeg_ok || die "ffmpeg is missing the VP9 or H.264 encoder"
-  ok "$(ffmpeg -version | head -1 | cut -c1-40) installed in runtime/bin"
+  ok "$(ffmpeg -version | head -1 | cut -c1-40) installed in runtime/bin (checksum verified)"
 }
 
 step_uv(){

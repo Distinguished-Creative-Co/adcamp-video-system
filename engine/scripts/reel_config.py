@@ -21,6 +21,28 @@ import unicodedata
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FPS = 30
 
+# Words that flip what follows them. Words pulled from a line onto the screen keep one said just before them: "don't
+# skip this" shown as SKIP THIS says the opposite (Chris, 2026-11-23). Compared after the apostrophe check folds a curly
+# one to straight, and with none at all ("dont"), since transcripts and scripts spell it either way.
+NEGATIONS = {'not', 'no', 'never', 'nobody', 'nothing', 'none', 'nowhere', 'neither', 'nor', 'without', 'cannot'} | {
+    n + t for n in ('don', 'doesn', 'didn', 'can', 'won', 'wouldn', 'shouldn', 'couldn', 'isn', 'aren', 'wasn', 'weren',
+                    'haven', 'hasn', 'hadn', 'ain', 'mustn', 'needn') for t in ("'t", 't')}
+# small words that may sit between a negation and what it flips: "not a sales pitch", "never going to miss"
+NEG_BRIDGE = {'a', 'an', 'the', 'to', 'be', 'my', 'your', 'our', 'their', 'his', 'her', 'its', 'this', 'that', 'these',
+              'those', 'so', 'really', 'very', 'just', 'even', 'ever', 'going', 'gonna', 'want', 'wanna', 'have', 'got',
+              'gotta', 'need', 'any', 'more', 'much', 'all', 'too', 'some', 'get'}
+
+
+def negation_before(prev):
+    """The negation that flips the words right after `prev` (the same sentence's words before them, normalized), or None.
+    Walks back over at most four small bridge words ("not a", "not going to want to")."""
+    for hop, t in enumerate(reversed(prev)):
+        if t in NEGATIONS:
+            return t
+        if t not in NEG_BRIDGE or hop >= 4:
+            return None
+    return None
+
 
 def config_path(name):
     return os.path.join(ROOT, 'src', 'methodology', 'reels', '%s.config.ts' % name)
@@ -171,6 +193,51 @@ def timeline_errors(cfg):
         for n in re.findall(r'\d+', txt):
             if n not in spoken:
                 errs.append('number "%s" on screen ("%s") is never spoken in the reel' % (n, txt[:60]))
+    # A GLASS WORD NEEDS A DARKER ROOM: frosted white on a light wall barely shows (measured 2026-11-23: a white wall
+    # reads about 200-220 of 255 beside the head, a dim office about 70). The solid word, with its dark edge, reads on
+    # both. Sampled beside the host (the outer columns of the words' band), where the wall shows.
+    cut = os.path.join(ROOT, 'public', cfg['src'])
+    for b in [b for b in cfg.get('backText') or [] if b.get('glass')] if os.path.exists(cut) else []:
+        size = min(330.0, 1080 * 0.9 / (0.74 * max(len(b['text']), 3)))
+        cy = b.get('y') or (1920 * 0.075 + size * 0.46)   # BackText.tsx: the row's top at 7.5% of the height, unless y
+        y0, y1 = int(max(0, cy - size * 0.45) / 10), int(min(1920, cy + size * 0.45) / 10)
+        lum = []
+        for f in (b['in'] + 10, (b['in'] + b['out']) // 2, b['out'] - 10):
+            raw = subprocess.run(['ffmpeg', '-v', 'error', '-nostdin', '-i', cut, '-vf', 'select=eq(n\\,%d),scale=108:192,format=gray' % f,
+                                  '-frames:v', '1', '-f', 'rawvideo', '-'], capture_output=True).stdout
+            if len(raw) == 108 * 192 and y1 > y0:
+                rows = [raw[r * 108:(r + 1) * 108] for r in range(y0, y1)]
+                lum += [v for row in rows for v in row[:30] + row[78:]]
+        if lum and sum(lum) / len(lum) > 165:
+            errs.append('glass word "%s" sits on a light wall (brightness %d of 255 beside the head): frosted glass barely '
+                        'shows there. Use the solid word (drop "glass")' % (b['text'], sum(lum) / len(lum)))
+    # A WORD ON SCREEN KEEPS ITS "NOT" (members too: this is the meaning, not a claim). Words pulled from a line onto the
+    # screen never drop a negation said just before them: "don't skip this" shown as SKIP THIS says the opposite.
+    seq = [(said_key(w['t']), w['s'], w['sent']) for w in words if w['t'] and said_key(w['t'])]
+    pulled = [('back text', b['text'], b['in']) for b in cfg.get('backText') or []]
+    if th.get('back'):
+        pulled.append(('the cover image\'s words behind', th['back'], th.get('frame', 0)))
+    if cvb:
+        pulled.append(('the cover\'s words behind', cvb, (cfg.get('cover') or {}).get('frame', 0)))
+    for e in cfg.get('effects') or []:
+        if e.get('kind') == 'word-stamp':
+            pulled.append(('word stamp', e.get('word') or '', e['in']))
+        elif e.get('kind') in ('intertitle', 'quote-card', 'pinned-line'):
+            pulled.append((e['kind'], e.get('text') or '', e['in']))
+    for label, text, frame in pulled:
+        toks = [said_key(t) for t in text.replace('==', '').split() if said_key(t)]
+        if not toks or any(t in NEGATIONS for t in toks):
+            continue
+        n = len(toks)
+        hits = [i for i in range(len(seq) - n + 1) if [s[0] for s in seq[i:i + n]] == toks] or \
+               [i for i, s in enumerate(seq) if s[0] == toks[0]]   # words skipped inside: anchor on the first one
+        if not hits:
+            continue
+        i = min(hits, key=lambda k: abs(seq[k][1] - frame / float(FPS)))   # where it was said, nearest its frame
+        neg = negation_before([s[0] for s in seq[:i] if s[2] == seq[i][2]])
+        if neg:
+            errs.append('%s "%s" leaves out "%s", said just before it: on screen it says the opposite of the line. '
+                        'Put "%s" in, or pick other words' % (label, text, neg, neg.upper()))
     # lights-down stays inside one take: the picture joins live in the cut's sidecar, which validateReel only sees at render
     side = os.path.join(ROOT, 'public', os.path.splitext(cfg['src'])[0] + '.json')
     joins = [int(round(t * FPS)) for t in json.load(open(side)).get('videoJoins', [])] if os.path.exists(side) else []

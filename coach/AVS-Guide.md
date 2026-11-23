@@ -130,13 +130,20 @@ AVS's own rules: film vertical, pause between sentences, and say "reset, reset" 
 - **Music**: optional. Tell Claude a vibe ("calm and warm", "upbeat") and it finds a few free tracks from Openverse whose license allows business use, ads included (CC0, CC BY, or marked public domain by the uploader). The license details come from Openverse and the person who uploaded the track, so AVS keeps the source link for you to check, and any platform can still flag music in a video or an ad. You hear a 20-second snippet of each in the chat and pick one, or say no music. Almost all tracks ask for a credit, so Claude adds one Music line to the end of your caption with the track, the artist, its source and its license. Keep that line everywhere you post that video, ads and other versions too. In a paid ad it sits at the end of your primary text and is fairly long, with two links, so leave room for it. Already have a track you're licensed to use? Drag it into the chat box, tell Claude where it's from, and it sets it up. Claude skips a quiet intro so the music starts where the track gets going.
 - **Your look**: tell Claude to change your color or fonts any time ("make my color green"), or pick fonts by watching them in the Picker. A very dark color (navy, black, deep purple) shows as a lighter shade of itself in the words and graphics over your video, photos and dark slides, so they stay readable. Light slides keep it exactly. Plain fonts: Hanken Grotesk, Inter, Montserrat, DM Sans, Poppins. Second fonts, for key words in some looks: Playfair, Instrument Serif, DM Serif, Fraunces. Want dollar amounts like $200 in green? Say "make the money green" and Claude saves it in your own look, so every video after has it. Any change means a new preview and a new approval before the next render.
 
-## Common requests after a render
+## Common change requests (on a draft or after a render)
 
 - "Music too loud" or "too quiet": Claude changes the level for that reel.
 - "Music comes in late": Claude skips further into the track.
 - "Too much zooming": Claude removes some zooms.
 - "Too bright", "more cinematic", "moodier": Claude switches the color look (Natural, Bright and Clean, Warm, Cool, Soft Film, Moody, Cinematic), and the next start page opens on it.
 - "There's a long pause at 0:39": Claude trims it, then shows you the preview again.
+- "At 0:24 I stumbled, cut it out": Claude trims the stumble in the pause next to it and keeps everything else you picked.
+- "Make the captions bigger" (or smaller, higher, lower): Claude changes them for that video, or for every video in your
+  look. Two-Font captions keep their own sizes, so for those Claude offers another caption style.
+- "Make the big words behind my head say ___" or "move them up": Claude changes the words (one to three of them) or
+  how high they sit.
+- "Take out the effect at 0:15" or "move it to when I say ___": Claude removes it or moves it to that word.
+- "Use cover B": Claude puts that cover on the video.
 - "I don't like the opening" (or any part): Claude makes two or three different versions of just that part, plays them in the chat, and puts in the one you pick.
 - Any change after you approve means a new preview and a new approval. That's on purpose.
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { GOLD, ACCENT_ON_FOOTAGE, moneyColor } from '../vc/style';
 import { accentFace, SANS, type AccentFont } from '../vc/fonts';
 import type { Line } from '../../methodology/timeline';
+import { bareWord } from '../../methodology/ReelConfig';
 import { LEAD_F } from '../../methodology/layout';
 import { adCapScale, capTop } from '../../methodology/adsafe';
 
@@ -17,12 +18,12 @@ const W = 840, CY = 1290, BOTTOM = 1580;   // 120-960: clear of the right-side R
 const chunk = <T,>(a: T[], n: number) => { const o: T[][] = []; for (let i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; };
 const backOut = (p: number) => { const c = 1.7; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
 
-export const DynamicCaptions: React.FC<{ line?: Line; now: number; fps: number; accent?: AccentFont; opacity: number; plain?: boolean; money?: string; paid?: boolean; cy?: number }> = ({ line, now, fps, accent, opacity, plain = false, money, paid = false, cy }) => {
+export const DynamicCaptions: React.FC<{ line?: Line; now: number; fps: number; accent?: AccentFont; opacity: number; plain?: boolean; money?: string; paid?: boolean; cy?: number; avoid?: string[] }> = ({ line, now, fps, accent, opacity, plain = false, money, paid = false, cy, avoid = [] }) => {
   if (!line) return null;
   const face = accentFace(accent);
   const words = line.words.filter((w) => w.t);
   // plain: back text is on screen, so it is the one big word and the captions step back
-  const ei = plain ? -1 : words.findIndex((w) => w.key ?? w.big);
+  const ei = plain ? -1 : words.findIndex((w) => (w.key ?? w.big) && !avoid.includes(bareWord(w.t)));   // a graphic showing that word now: no accent row
   type Row = { ws: typeof words; accent: boolean };
   const rows: Row[] = ei < 0
     ? chunk(words, words.length > 4 ? 3 : 2).map((ws) => ({ ws, accent: false }))

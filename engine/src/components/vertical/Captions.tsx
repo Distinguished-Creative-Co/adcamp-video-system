@@ -4,7 +4,7 @@ import { CREME, CREME_DARK, GOLD, INK_ON_ACCENT, lookColor, moneyColor } from '.
 import { displayFace } from '../vc/fonts';
 import { LEAD_F } from '../../methodology/layout';
 import type { Line } from '../../methodology/timeline';
-import type { CaptionLook } from '../../methodology/ReelConfig';
+import { bareWord, type CaptionLook } from '../../methodology/ReelConfig';
 import { capTop } from '../../methodology/adsafe';
 
 /**
@@ -25,7 +25,8 @@ export const CaptionLines: React.FC<{
   punch?: boolean;  // 1-2 words at a time: no backing box (it would show empty before a word pops), a heavy outline instead
   look?: CaptionLook;  // a saved style's type and color; absent = the house look, unchanged
   paid?: boolean;      // a paid ad: a block centered on cy is clamped inside Meta's ad safe zone (adsafe.ts)
-}> = ({ lines, x, w, top, cy, bottom, base, min, opacity, scrim, align = 'center', tone = 'dark', punch = false, look, paid = false }) => {
+  avoid?: string[];    // words a graphic is showing right now (graphicWords): drawn plain, never lifted a second time
+}> = ({ lines, x, w, top, cy, bottom, base, min, opacity, scrim, align = 'center', tone = 'dark', punch = false, look, paid = false, avoid = [] }) => {
   const light = tone === 'light';
   const face = displayFace(look?.font);
   const lk = look ?? {};
@@ -70,7 +71,7 @@ export const CaptionLines: React.FC<{
               const sp = spring({ frame: frame - (Math.round(wd.s * fps) - LEAD_F), fps, config: { damping: 200, stiffness: 240, mass: 0.5 }, durationInFrames: 8 });
               const p = lk.motion === 'cut' ? 1 : sp;
               const said = now >= wd.s - LEAD_F / fps;
-              const big = wd.big || !!wd.key;   // the key words dynamic_keys.py marked are lifted in every look
+              const big = (wd.big || !!wd.key) && !avoid.includes(bareWord(wd.t));   // the key words dynamic_keys.py marked are lifted in every look, unless a graphic shows that word now
               const ink = light ? (big ? INK_ON_ACCENT : CREME.ink) : moneyColor(wd.t, lk) ?? (big ? lookColor(lk.keyColor, GOLD.yellow) : lookColor(lk.color, CREME_DARK.ink));
               const styled = !light && typed;
               const shadow = lk.shadow === 'none' ? undefined : lk.shadow === 'hard' ? '0 5px 0 rgba(0,0,0,0.55), 0 8px 24px rgba(0,0,0,0.6)' : '0 3px 16px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.6)';

@@ -26,14 +26,18 @@ by name, so "cards and panels" reaches Studio).
 import json
 import os
 import re
+import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
+sys.path.insert(0, HERE)
+import reel_config  # noqa: E402  (NEGATIONS, negation_before: a hook title keeps its "not")
 STYLES = os.path.join(ROOT, 'styles')
 BASES = ('studio', 'minimal', 'hype')
 TRANSITIONS = ('flash', 'whip', 'zoom', 'spin', 'iris', 'bars')
 CAPTION_STYLES = ('lines', 'punch', 'dynamic', 'word', 'bigword', 'pill', 'editorial', 'steps')
 FPS = 30
+BACK_LEAD = 4   # words behind the host start this many frames before their word, so they have landed as it is said
 RETIRED_EFFECTS = {'word-stamp': 'Word Stamp', 'cover-story': 'Cover Story'}   # off the pages since 2.1.0, still drawn in older videos
 
 
@@ -314,21 +318,30 @@ def hook_title(cfg):
     if not title or 'TODO' in title or any(norm(x) not in spoken for x in title.split()):   # back text must be said aloud
         first = [norm(w['t']) for w in words if w['sent'] == words[0]['sent'] and norm(w['t'])]
         runs, cur = [], []   # stretches of the line without filler words: "same conversation", "four different chiropractors"
-        for t in first:
+        for k, t in enumerate(first):
             if t in FILLER:
                 runs, cur = runs + ([cur] if cur else []), []
             else:
-                cur.append(t)
+                cur.append((k, t))
         runs += [cur] if cur else []
-        pick = next((r for r in runs if len(r) >= 2), runs[0] if runs else first[:3])
-        title = ' '.join(pick[:3])
+        pick = next((r for r in runs if len(r) >= 2), runs[0] if runs else list(enumerate(first[:3])))
+        neg = reel_config.negation_before(first[:pick[0][0]]) if pick else None
+        # "this is not a sales pitch": the run is SALES PITCH, so its "not" comes along, or the title says the opposite
+        title = ' '.join(([neg] if neg and not any(t in reel_config.NEGATIONS for _, t in pick) else []) + [t for _, t in pick][:3])
     parts = title.split()[:3]
     while len(parts) > 1 and len(' '.join(parts)) > 18:   # the engine's limit: 1-3 words, 18 characters
         parts = parts[:-1]
     title = ' '.join(parts)[:18]
-    f_in = max(0, round(words[0]['s'] * FPS))
+    # it starts BACK_LEAD frames before its first word, so it has landed as the word is said
+    f_in = max(0, round(words[0]['s'] * FPS) - BACK_LEAD)
     first_end = max(w['e'] for w in words if w['sent'] == words[0]['sent'])
-    f_out = max(f_in + 45, min(round(first_end * FPS), f_in + 90))
+    end = round(first_end * FPS)
+    f_out = max(f_in + 45, min(end, f_in + 90))
+    # a picture join just after the line (inside the 3 s cap): end on it, so the transition there carries the words out
+    # instead of a fade. A line longer than the cap keeps the cap.
+    j = next((j for j in video_joins(cfg) if end <= j <= max(f_out, end) + 15 and j >= f_in + 30), None) if end <= f_in + 90 else None
+    if j is not None:
+        f_out = j
     return {'text': title, 'in': f_in, 'out': min(f_out, cfg['frames'] - 1)}
 
 

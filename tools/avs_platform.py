@@ -22,7 +22,7 @@ FFMPEG_WIN = '9.0.2'
 MEDIAPIPE = '0.10.21'
 YTDLP = '2026.8.19'   # PyPI spelling of yt-dlp 2026.08.19
 
-# (url, sha256) per system; every Windows download is checked (Mac ffmpeg keeps install.sh's unchecked "latest")
+# (url, sha256) per system; every download is checked
 NODE = {
     'win-x64': ('https://nodejs.org/dist/v%s/node-v%s-win-x64.zip' % (NODE_VERSION, NODE_VERSION),
                 '2b0ff57b049cda1bbcea2240eec20467018713c1efe1f7360c2681859b90ed71'),
@@ -42,6 +42,14 @@ UV = {
 FFMPEG = {
     'win-x64': ('https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-%s-essentials_build.zip' % FFMPEG_WIN,
                 '60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba'),
+}
+# Mac ffmpeg + ffprobe, pinned 2026-11-23 like install.sh: "latest" moved to 9.1 on Nov 20 and the test video then cut
+# differently and failed its sound check. (build folder, ffmpeg.zip sha256, ffprobe.zip sha256) per chip.
+FFMPEG_MAC = {
+    'arm64': ('1789931890_9.0.2', 'c8ed4c4e6978a03c485edbfe4e0a5dc2380f8a30bba5150531b31b094492d924',
+              'fcbe839537485eaee7a7a8bc5cbc0f90d53617e80943e8a5b2e31cb851197ea6'),
+    'amd64': ('1789931006_9.0.2', '7c6b4125b191cbf773832dc51f424cf2b6bb7da43007d1e066f95909e47cacd4',
+              '2322438ed2f6319a691291b247d09c69dcaa3a982460d1f269a7e1af335cfdfd'),
 }
 CUTOUT_MODEL = ('https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/'
                 'selfie_multiclass_256x256.tflite', 'c6748b1253a99067ef71f7e26ca71096cd449baefa8f101900ea23016507e0e0')

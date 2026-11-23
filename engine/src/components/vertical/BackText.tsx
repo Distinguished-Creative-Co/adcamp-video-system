@@ -4,11 +4,12 @@ import { displayFace, type DisplayFont } from '../vc/fonts';
 import { backTextPlace } from '../../methodology/adsafe';
 
 /** The words themselves, in viewport space (they do not ride the camera's zoom). Rise in on a
- *  short ease, breathe slightly while held, fade out before the cut. Drawn between the
+ *  short ease, breathe slightly while held, fade out before they end. Drawn between the
  *  footage and the host cutout, so the host's head and shoulders cover part of them. An entry's own y, x (the row's
  *  centre) set them behind the head wherever it is in that shot. A paid ad sets them lower and a little narrower, held
- *  inside Meta's ad safe zone (adsafe.ts). */
-export const BackTextLayer: React.FC<{ text: string; lf: number; len: number; w: number; h: number; look?: { font?: DisplayFont; color?: string; outline?: number; glass?: boolean }; paid?: boolean; y?: number; x?: number }> = ({ text, lf, len, w, h, look, paid = false, y, x }) => {
+ *  inside Meta's ad safe zone (adsafe.ts). held: a cut lands on their last frame, so they never fade: they stay
+ *  until the cut and the transition carries them out (a fade just before a whip reads as the words leaving early). */
+export const BackTextLayer: React.FC<{ text: string; lf: number; len: number; w: number; h: number; look?: { font?: DisplayFont; color?: string; outline?: number; glass?: boolean }; paid?: boolean; y?: number; x?: number; held?: boolean }> = ({ text, lf, len, w, h, look, paid = false, y, x, held = false }) => {
   const face = displayFace(look?.font);
   const words = text.trim().toUpperCase().split(/\s+/);
   const rows = [words.join(' ')];   // one row: the host covers the middle, so a second row would hide behind the head
@@ -18,7 +19,7 @@ export const BackTextLayer: React.FC<{ text: string; lf: number; len: number; w:
   const size = place ? place.size : Math.min(330, (w * 0.9) / ((look?.font ? face.width * 1.25 : 0.74) * Math.max(longest, 3)));
   const inP = Math.min(1, Math.max(0, lf / 10));
   const e = 1 - Math.pow(1 - inP, 3);
-  const outP = Math.min(1, Math.max(0, (len - lf) / 8));
+  const outP = held ? 1 : Math.min(1, Math.max(0, (len - lf) / 8));
   const op = e * outP;
   const scale = (0.9 + 0.1 * e) * (1 + 0.04 * (lf / Math.max(len, 1)));
   return (
