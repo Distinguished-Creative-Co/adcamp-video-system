@@ -57,8 +57,8 @@ https://raw.githubusercontent.com/Distinguished-Creative-Co/adcamp-video-system/
 Set up AVS
 ```
 
-If you have the zip instead (`AVS-2.2.3.zip`), put it in Downloads and say "Install AdCamp Video System from
-~/Downloads/AVS-2.2.3.zip into ~/AVS, then follow ~/AVS/INSTALL.md".
+If you have the zip instead (`AVS-2.2.4.zip`), put it in Downloads and say "Install AdCamp Video System from
+~/Downloads/AVS-2.2.4.zip into ~/AVS, then follow ~/AVS/INSTALL.md".
 
 Claude walks you through everything, shows you your name in four font pairs so you can pick, makes a test video,
 helps you set your look, then gets you straight into your first video.
@@ -78,6 +78,26 @@ you can see it), a color for your footage, and a box for your script. Press Star
 storyboard beside it, every part of the video with a Comment button.
 Comment on anything you'd change, or tell Claude in the chat. When it looks right, say "render it" and it makes the
 finished video. Nothing is ever posted for you.
+
+## Not right? Say this
+
+Tell Claude what to change in plain words, with a time from the draft when it helps. These all work:
+
+- "At 0:24 I stumbled. Cut it out."
+- "Use the first time I said that line."
+- "Make the captions bigger." (Or smaller, higher, lower.)
+- "Make the big words behind my head say ___."
+- "Move the big words behind my head up." (Or down.)
+- "Take out the effect at 0:15." Or "Move it to when I say ___."
+- "Less zooming."
+- "Make the music quieter." (Or louder.)
+- "Turn off the pop sounds." (Or any other sound effect.)
+- "Make the colors warmer." (Or brighter, moodier, more cinematic.)
+- "Use cover B." (The three covers are at the top of your storyboard.)
+- "I don't like Part 03. Show me a few versions."
+
+Send as many as you like at once. Claude makes each change and shows you a new draft, and nothing is final until you
+say "render it".
 
 ## Stuck?
 

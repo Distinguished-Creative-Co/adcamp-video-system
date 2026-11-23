@@ -11,10 +11,17 @@ Modes (CPU, int8 everywhere):
             speech can be dropped), then whisperX only aligns those segments.
 
 Output: a JSON list of {"word", "start", "end"}, times rounded to 3 decimals.
+
+A file with more than one audio track (a raw iPhone clip with spatial audio) is read through
+a temporary WAV of the track normalize_source.audio_stream() picks. Left alone, faster-whisper
+opens the first track and whisperX's ffmpeg the one with the most channels, both the
+spatial-audio track ffmpeg cannot decode.
 """
 import json
 import os
+import subprocess
 import sys
+import tempfile
 
 # everything stays on this Mac: pyannote (inside whisperX) sends usage pings by default, Hugging Face may too
 os.environ.setdefault('PYANNOTE_METRICS_ENABLED', '0')
@@ -31,6 +38,26 @@ def _need(module):
         return __import__(module)
     except ImportError:
         sys.exit('word_align_x: %s' % SETUP_HINT)
+
+
+def speech_input(media):
+    """(path to transcribe, temp folder to remove or None). A file with one decodable audio track is read as is.
+    With several (an iPhone spatial-audio clip), the picked track goes to a 16 kHz mono WAV, what both speech
+    libraries resample to anyway, so the words keep their times."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import normalize_source
+    info = normalize_source.probe(media)
+    auds = [s['index'] for s in info['streams'] if s.get('codec_type') == 'audio']
+    pick = normalize_source.audio_stream(media, info)
+    if pick is None:
+        sys.exit('word_align_x: no audio track in %s that can be decoded (the transcript needs speech)' % media)
+    if auds == [pick]:
+        return media, None
+    tmp = tempfile.mkdtemp(prefix='avs-speech-')
+    wav = os.path.join(tmp, 'speech.wav')
+    subprocess.run(['ffmpeg', '-v', 'error', '-nostdin', '-y', '-i', media, '-map', '0:%d' % pick, '-vn',
+                    '-ac', '1', '-ar', '16000', '-c:a', 'pcm_s16le', wav], check=True)
+    return wav, tmp
 
 
 def words_fast(path, model):
@@ -85,15 +112,21 @@ def main():
         sys.exit('usage: word_align_x.py <media> [--model NAME] [--fast | --full]')
     media = pos[0]
 
-    if '--fast' in argv:
-        raw = words_fast(media, model or 'base')
-        label = 'faster-whisper transcribe (punctuated, for the cut)'
-    elif '--full' in argv:
-        raw = words_full(media, model or 'small')
-        label = 'whisperX forced alignment'
-    else:
-        raw = words_whisperx(media, model or 'small')
-        label = 'whisperX forced alignment'
+    speech, tmp = speech_input(media)
+    try:
+        if '--fast' in argv:
+            raw = words_fast(speech, model or 'base')
+            label = 'faster-whisper transcribe (punctuated, for the cut)'
+        elif '--full' in argv:
+            raw = words_full(speech, model or 'small')
+            label = 'whisperX forced alignment'
+        else:
+            raw = words_whisperx(speech, model or 'small')
+            label = 'whisperX forced alignment'
+    finally:
+        if tmp:
+            import shutil
+            shutil.rmtree(tmp, ignore_errors=True)
 
     rows = [{'word': w.strip(), 'start': round(float(s), 3), 'end': round(float(e), 3)} for w, s, e in raw]
     stem = os.path.splitext(os.path.basename(media))[0]

@@ -9,8 +9,10 @@ when Settings > Camera > Mirror Front Camera is on, so any text on screen reads 
 Output: 1080x1920, constant 30 fps, H.264 yuv420p bt709, ONE AAC track. Why here and
 nowhere else: every later step (the transcriber and cutter, Remotion's
 OffthreadVideo) then sees a canvas-sized, CFR, single-audio file. iPhone MOVs carry a
-4-channel spatial-audio track and a slightly variable frame rate the frame math must
-not inherit, and decoding 4K portrait per frame (twice during a swap) is 4x the cost.
+slightly variable frame rate the frame math must not inherit, and decoding 4K portrait
+per frame (twice during a swap) is 4x the cost. Newer iPhones also record spatial audio
+(APAC, which ffmpeg cannot decode) as the FIRST audio track, with a plain stereo AAC copy
+after it: audio_stream() picks the track every step can decode (AAC first).
 
 VERTICAL ONLY (decided 2026-09-26): a landscape source is refused, not reframed.
 The raw file is never modified. Source provenance lands in qa/<name>/source.json.
@@ -42,6 +44,28 @@ def tonemap_vf(trc):
         return ('zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=mobius:desat=0,'
                 'zscale=t=bt709:m=bt709:r=tv,format=yuv420p,')
     return ''
+
+
+UNDECODABLE = ('apac', 'apple_apac')   # iPhone spatial audio: ffmpeg has no decoder for it (ffprobe 7.1+ says apple_apac)
+
+
+def _decodes(path, index):
+    """True when ffmpeg can decode the first moment of stream <index> (a codec it has no decoder for fails at once)."""
+    p = subprocess.run(['ffmpeg', '-v', 'error', '-nostdin', '-i', path, '-map', '0:%d' % index, '-t', '0.2', '-f', 'null', '-'],
+                       capture_output=True)
+    return p.returncode == 0
+
+
+def audio_stream(path, info=None):
+    """The index of the audio stream to read speech from, or None when no audio stream can be decoded.
+    AAC first, then the others in file order, skipping iPhone spatial audio (APAC) and anything ffmpeg cannot decode.
+    Every step that reads audio from a raw clip uses this, never ffmpeg's own pick (the track with the most channels,
+    which on a spatial-audio iPhone clip is the APAC one) or the first audio track."""
+    info = info or probe(path)
+    auds = [s for s in info['streams'] if s.get('codec_type') == 'audio'
+            and s.get('codec_name') not in UNDECODABLE and s.get('codec_tag_string') != 'apac']
+    auds.sort(key=lambda s: s.get('codec_name') != 'aac')   # stable: AAC tracks first, file order kept within each group
+    return next((s['index'] for s in auds if _decodes(path, s['index'])), None)
 
 
 def display_size(stream):
@@ -85,16 +109,15 @@ def main():
     raw = os.path.realpath(os.path.expanduser(raw))
     info = probe(raw)
     vids = [s for s in info['streams'] if s.get('codec_type') == 'video']
-    auds = [s for s in info['streams'] if s.get('codec_type') == 'audio' and s.get('codec_name') != 'apac']
     if not vids:
         sys.exit('normalize: no video stream in %s' % raw)
-    if not auds:
+    a_idx = audio_stream(raw, info)
+    if a_idx is None:
         sys.exit('normalize: no usable audio stream in %s (the pipeline is driven by speech)' % raw)
     w, h = display_size(vids[0])
     if h <= w:
         sys.exit('normalize: %s is %dx%d (landscape). This engine is VERTICAL ONLY. '
                  'AVS needs a vertical video. Film again with the phone held upright.' % (raw, w, h))
-    a_idx = auds[0]['index']
     os.makedirs(os.path.dirname(out) or '.', exist_ok=True)
     trc = vids[0].get('color_transfer')
     hdr = trc in ('arib-std-b67', 'smpte2084')

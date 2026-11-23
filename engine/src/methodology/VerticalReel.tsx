@@ -11,7 +11,7 @@ import { Cover } from '../components/vertical/Cover';
 import { PaperBg } from '../components/vertical/PaperBg';
 import { CAP_FULL, CAP_STAGE, CARD_HOST, lerpView } from './layout';
 import { buildLines, stateAt, visibleLines, type Ease } from './timeline';
-import { backFgSrc, framingAt, lightsFgSrc, LIGHTS_DEPTH, validateReel, zoomAt, type ReelConfig } from './ReelConfig';
+import { backFgSrc, framingAt, graphicWords, lightsFgSrc, LIGHTS_DEPTH, validateReel, zoomAt, type ReelConfig } from './ReelConfig';
 import { FollowCard } from '../components/vertical/FollowCard';
 import { EffectLayer, GiantNumber, ShapeTransition, cameraMove } from '../components/vertical/Effects';
 import { ClipCard } from '../components/vertical/ClipCard';
@@ -60,7 +60,9 @@ export const VerticalReel: React.FC<{ cfg: ReelConfig | null }> = ({ cfg }) => {
   const zm = st.capRegion === 'full' ? zoomAt(cfg, frame) * framingAt(cfg, frame) * snaps.reduce((k, e) => k * snapZoomAt(e, frame), 1) : 1;
   const bt = st.capRegion === 'full' ? (cfg.backText ?? []).find((b) => frame >= b.in && frame < b.out) : undefined;
   const over = !!cfg.look?.backText?.over;   // in front of the host: no cutout needed
-  const back = bt && !over ? { text: bt.text, from: bt.in, lf: frame - bt.in, len: bt.out - bt.in, fg: backFgSrc(cfg.src, bt), look: bt.glass ? { ...cfg.look?.backText, glass: true } : cfg.look?.backText, paid, y: bt.y, x: bt.x } : undefined;
+  // a cut on the words' last frame carries them out (they ride the camera's move): no fade before it
+  const held = !!bt && (cfg.effects ?? []).some((e) => e.kind === 'transition' && Math.abs(e.at - bt.out) <= 1);
+  const back = bt && !over ? { text: bt.text, from: bt.in, lf: frame - bt.in, len: bt.out - bt.in, fg: backFgSrc(cfg.src, bt), look: bt.glass ? { ...cfg.look?.backText, glass: true } : cfg.look?.backText, paid, y: bt.y, x: bt.x, held } : undefined;
   const ins = st.capRegion === 'full' ? (cfg.inserts ?? []).find((b) => frame >= b.in && frame < b.out) : undefined;
   const fxs = st.capRegion === 'full' ? (cfg.effects ?? []).filter((e) => e.kind !== 'transition' && e.kind !== 'card' && e.kind !== 'snap-zoom' && e.kind !== 'pinned-line' && e.kind !== 'giant-number' && e.kind !== 'lights-down' && frame >= e.in && frame < e.out) : [];
   // lights down: the room dims behind the host's cutout for one line (drawn inside the host view, so it rides the camera)
@@ -79,6 +81,7 @@ export const VerticalReel: React.FC<{ cfg: ReelConfig | null }> = ({ cfg }) => {
   const ck = card ? Math.min(ease(frame - card.in, 10), 1 - ease(frame - (card.out - 10), 10)) : 0;
   const hostView = card ? lerpView(st.view, CARD_HOST, ck) : st.view;
   const giant = fxs.some((e) => e.kind === 'giant-captions');
+  const avoid = st.capRegion === 'full' ? graphicWords(cfg, frame) : [];   // words a graphic shows now: the captions never lift them too
   const trans = (cfg.effects ?? []).filter((e): e is Extract<typeof e, { kind: 'transition' }> => e.kind === 'transition');
   const cam = trans.map((t) => cameraMove(t, frame, cfg.faceX, cfg.faceY)).find((m) => m);
   const host = (b?: typeof back, l?: typeof lights) => (
@@ -129,11 +132,11 @@ export const VerticalReel: React.FC<{ cfg: ReelConfig | null }> = ({ cfg }) => {
       {ins?.kind === 'clip' ? inBand(<ClipCard insert={ins} lf={frame - ins.in} len={ins.out - ins.in} />) : null}
 
       {giant || card || (bigNum && frame > bigNum.in && frame < bigNum.out - 1) ? null : st.capRegion === 'full' && styledMode ? (
-        <StyledCaptions mode={styledMode} line={shown[0]} now={now} fps={fps} opacity={st.capOpacity} look={capLook} serif={cfg.captionAccent} cy={capLook?.y ?? cfg.fullCaptionY ?? 1290} paid={paid} />
+        <StyledCaptions mode={styledMode} line={shown[0]} now={now} fps={fps} opacity={st.capOpacity} look={capLook} serif={cfg.captionAccent} cy={capLook?.y ?? cfg.fullCaptionY ?? 1290} paid={paid} avoid={avoid} />
       ) : st.capRegion === 'full' && dynamic ? (
-        <DynamicCaptions line={shown[0]} now={now} fps={fps} accent={cfg.captionAccent} opacity={st.capOpacity} plain={!!bt} money={capLook?.money} paid={paid} cy={capLook?.y ?? cfg.fullCaptionY} />
+        <DynamicCaptions line={shown[0]} now={now} fps={fps} accent={cfg.captionAccent} opacity={st.capOpacity} plain={!!bt} money={capLook?.money} paid={paid} cy={capLook?.y ?? cfg.fullCaptionY} avoid={avoid} />
       ) : st.capRegion === 'full' ? (
-        <CaptionLines lines={shown} x={CAP_FULL.x} w={CAP_FULL.w} cy={capLook?.y ?? cfg.fullCaptionY ?? CAP_FULL.cy} base={capLook?.size ?? (word ? 150 : punch ? 128 : CAP_FULL.size)} min={punch ? 76 : CAP_FULL.min} opacity={st.capOpacity} scrim={capLook?.plate ? capLook.plate === 'dark' : !punch} punch={punch} look={capLook} paid={paid} />
+        <CaptionLines lines={shown} x={CAP_FULL.x} w={CAP_FULL.w} cy={capLook?.y ?? cfg.fullCaptionY ?? CAP_FULL.cy} base={capLook?.size ?? (word ? 150 : punch ? 128 : CAP_FULL.size)} min={punch ? 76 : CAP_FULL.min} opacity={st.capOpacity} scrim={capLook?.plate ? capLook.plate === 'dark' : !punch} punch={punch} look={capLook} paid={paid} avoid={avoid} />
       ) : null}
 
       {st.swap ? (

@@ -73,6 +73,8 @@ the lines for each moment. Say them in these words or close to them, filling in 
 - An effect left out: "I left out <effect>. Nothing you said fit it." One that needs a screenshot they didn't send: "I
   left out <effect>. It needs a screenshot from you. Send one and I'll add it." Use the name they saw in the Picker (Snap
   Zoom, Giant Words, Keycaps: `picker/catalog.json` has each name), never the key like snap-zoom.
+- A Glass Word the scene map flags on a light wall (you made it the solid word): "Your wall is light, so the Glass Word
+  would barely show. I made that word a solid color instead."
 - A retired effect asked for by name: "Word Stamp was retired, so it isn't offered for new videos anymore. Giant
   Words does a similar job. Want that instead?" For Cover Story the same line, offering Title Card. Never add one, even
   asked by name. A video that already has one keeps it until it is restyled: a restyle takes it out and make_style
@@ -328,6 +330,14 @@ part of the edit, not one of the 20 effects, so they can still go in, except whe
   `"backText": [{"text": "BLUEPRINT", "in": 1494, "out": 1577}]`. Optional `"y"` (and `"x"`): the row's centre in
   1080x1920 pixels, to set the words behind their head wherever the head is in that shot (find it on a gridded still:
   put y across the head so it covers the middle of the word). A paid ad holds it inside Meta's ad safe zone.
+  Start it 4 frames before its word (`"in"` = the word's frame minus 4), so it has landed as the word is said. When a
+  transition comes within half a second after it, end it on that transition's frame (`"out"` = its `"at"`): the cut
+  carries the words out, where a fade just before it reads as the words leaving early. Keep a "not", "don't" or "never"
+  said just before the words ("don't skip this" is DON'T SKIP, never SKIP): the scene map refuses any words on screen
+  that drop one (words behind, the cover's words behind, a title card, a quote card, a pinned line). The captions never
+  lift a word a graphic is showing at that moment (their big word moves to another word there, on purpose). A glass
+  word needs a darker room: on a light wall the scene map asks for the solid word, so drop `"glass"` and say the glass
+  line.
 - **Follow card** (optional): a floating card with their photo, name, handle and a
   Follow pill that flips to Following, over a full-screen scene in the top band, e.g.
   `"inserts": [{"kind": "follow", "in": 20, "out": 95}]` (at least 45 frames, never over back text).
@@ -711,6 +721,20 @@ start page carries last time's post type, music and color over on purpose: capti
 
 ## Feedback they may give (and what to change)
 
+Their guide gives them lines to say when something isn't right (START-HERE, "Not right? Say this"). Each one below is
+one change: make it, then `--preview` and a fresh draft.
+
+- "Make the captions bigger" (smaller, higher, lower): this video only, in the config's `"look"` > `"captions"`:
+  `"size"` (40-220) or `"y"` (300-1460, the captions' centre in 1080x1920 pixels), keeping its other keys. Every video:
+  the same in their own look's `style.json` (a starter look: make their own first, as in "make the money green").
+  Two-Font captions (`dynamic`) keep their own sizes: say so, and offer another caption style if they want them bigger.
+- "Make the big words behind my head say ___": that entry's `"text"` in `"backText"`, 1-3 words, 18 characters at most (the
+  engine's limit). "Move them up" (or down): its `"y"` (150-1600, the row's centre).
+- "Take out the <effect> at 0:15": remove that entry from `"effects"`. "Move it to when I say <word>": move its `"in"`
+  and `"out"` together so it starts on that word's frame (the config's words carry their start in seconds: frame =
+  seconds x 30).
+- "Use cover B": the cover pick in step 3. "I don't like part 3, show me a few versions": "I don't like that part" in
+  step 3.
 - "Music too loud/quiet": `"musicUnderLu"` in the config (bigger = quieter, default 14).
 - Face framed wrong: never `--regen` (it would throw away their approved choices). Change only the anchor in the
   config, `"faceX": <new X>,` and `"faceY": <new Y>,` (from a fresh gridded still), then `--preview` again and a fresh

@@ -273,7 +273,15 @@ def cmd_render(a):
     props = tempfile.NamedTemporaryFile('w', suffix='.json', delete=False)
     json.dump({'doc': doc}, props)
     props.close()
-    cmd = REMOTION + ['render', 'src/methodology/index.ts', 'Carousel', out, '--sequence', '--image-format=png',
+    # the renderer reads everything after the last dot in the whole path as a file extension, and a folder of slides
+    # may not have one: a home folder with a dot in it (C:\Users\first.last, /Users/first.last) made it refuse the
+    # slides. Hand it the path from the engine folder (the renderer runs there, and slugs never hold a dot).
+    try:
+        rel = os.path.relpath(out, ROOT)
+    except ValueError:   # a carousel on another drive
+        rel = '..'
+    target = out if rel.startswith('..') else rel
+    cmd = REMOTION + ['render', 'src/methodology/index.ts', 'Carousel', target, '--sequence', '--image-format=png',
            '--props=' + props.name, '--public-dir=' + d, '--log=error']
     p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
     os.remove(props.name)

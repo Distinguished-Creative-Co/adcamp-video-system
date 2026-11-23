@@ -20,6 +20,9 @@ start=$(date +%s)
 say "1/4  Your test video: cut the sample (keeps the last clean take of each line), in the Clean Talk look"
 cp samples/sample.txt script/sample.txt
 cp samples/sample-trims.json script/word-timings/sample-trims.json
+# a run that stopped after step 2 leaves its cover C pick behind (step 4 clears it at the end), and the storyboard would
+# carry that pick onto the fresh config below, so fill_sample could not find the cover line it fills
+rm -rf qa/sample/covers.json qa/sample/covers-given.json qa/sample/storyboard/covers
 # --regen: always a fresh config, so a sample from an older version (or an interrupted run) is never reused
 scripts/make_reel.sh "$RAW" sample --face 510,760 --outdoor --regen --preview
 echo "(Expected on this first pass: NOT READY, the copy is blank and a few breaths between takes are flagged. The next steps set the look, fill the copy and sign off those breaths.)"

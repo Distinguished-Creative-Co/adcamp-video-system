@@ -2,7 +2,7 @@ import React from 'react';
 import { GOLD, inkOn, lookColor, moneyColor } from '../vc/style';
 import { accentFace, displayFace, type AccentFont } from '../vc/fonts';
 import type { Line } from '../../methodology/timeline';
-import type { CaptionLook } from '../../methodology/ReelConfig';
+import { bareWord, type CaptionLook } from '../../methodology/ReelConfig';
 import { LEAD_F } from '../../methodology/layout';
 import { AD_SAFE, adCapScale, capTop } from '../../methodology/adsafe';
 
@@ -26,11 +26,13 @@ const W = 840, LEFT = (1080 - W) / 2;
 const STOP = new Set('the and that this with from your have about there their they them then than what when where which while would could should into onto just going also only even more most some like over very much does after want around gonna is are was were be been a an of to in on at for it its it\'s i i\'m you you\'re we he she but or so if as by my me'.split(' '));
 const bare = (t: string) => t.toLowerCase().replace(/[^a-z0-9']/g, '');
 
-export const keyIndex = (ws: { t: string; key?: boolean; big?: boolean }[]): number => {
-  const marked = ws.findIndex((w) => w.key ?? w.big);
+// avoid: words a graphic is showing right now (graphicWords): never the key, so one word is never headlined twice at once
+export const keyIndex = (ws: { t: string; key?: boolean; big?: boolean }[], avoid: string[] = []): number => {
+  const off = (t: string) => avoid.includes(bareWord(t));
+  const marked = ws.findIndex((w) => (w.key ?? w.big) && !off(w.t));
   if (marked >= 0) return marked;
   let best = -1, len = 3;
-  ws.forEach((w, i) => { const b = bare(w.t); if (!STOP.has(b) && b.length > len) { best = i; len = b.length; } });
+  ws.forEach((w, i) => { const b = bare(w.t); if (!STOP.has(b) && b.length > len && !off(w.t)) { best = i; len = b.length; } });
   return best;
 };
 
@@ -42,8 +44,8 @@ const shadowOf = (k?: CaptionLook['shadow']) => k === 'none' ? undefined : k ===
 const caseOf = (k?: CaptionLook['case']): React.CSSProperties['textTransform'] => k === 'upper' ? 'uppercase' : k === 'lower' ? 'lowercase' : undefined;
 
 export const StyledCaptions: React.FC<{
-  mode: CaptionMode; line?: Line; now: number; fps: number; opacity: number; look?: CaptionLook; serif?: AccentFont; cy?: number; paid?: boolean;
-}> = ({ mode, line, now, fps, opacity, look, serif, cy = 1290, paid = false }) => {
+  mode: CaptionMode; line?: Line; now: number; fps: number; opacity: number; look?: CaptionLook; serif?: AccentFont; cy?: number; paid?: boolean; avoid?: string[];
+}> = ({ mode, line, now, fps, opacity, look, serif, cy = 1290, paid = false, avoid = [] }) => {
   if (!line || opacity <= 0) return null;
   const words = line.words.filter((w) => w.t);
   if (!words.length) return null;
@@ -52,7 +54,7 @@ export const StyledCaptions: React.FC<{
   const ser = accentFace(serif);
   const ink = lookColor(lk.color, '#FFFFFF');
   const key = lookColor(lk.keyColor, GOLD.yellow);
-  const ki = keyIndex(words);
+  const ki = keyIndex(words, avoid);
   const shadow = shadowOf(lk.shadow);
   const stroke = lk.outline ? { WebkitTextStroke: `${lk.outline}px rgba(12,10,6,0.85)`, paintOrder: 'stroke fill' } as React.CSSProperties : {};
   const base: React.CSSProperties = { fontFamily: face.family, fontWeight: lk.weight ?? face.weight, fontStyle: face.italic ? 'italic' : undefined,
@@ -71,11 +73,16 @@ export const StyledCaptions: React.FC<{
     const before = ki < 0 ? words : words.slice(0, ki), after = ki < 0 ? [] : words.slice(ki + 1);
     const small = fit(Math.max(before.map((w) => w.t).join(' ').length, after.map((w) => w.t).join(' ').length), lk.size ? lk.size * 0.42 : 56, face.width);
     const big = ki < 0 ? 0 : fit(words[ki].t.length, lk.size ?? 170, face.width * 1.05);
-    const row = (ws: typeof words) => ws.length ? (
-      <div style={{ display: 'flex', justifyContent: 'center', gap: small * 0.28, height: small * 1.15, alignItems: 'center' }}>
+    // a big word with a descender (every, nothing) reaches down into the row under it: that row drops by the
+    // descender's depth, so the gap under the word's ink matches the gap over it (measured 2026-11-23 in lowercase: 3-4 px
+    // under "every" and "nothing", 35-39 px over the word; capitals have no descender and stay as they were)
+    const shownKey = ki < 0 ? '' : lk.case === 'upper' ? words[ki].t.toUpperCase() : lk.case === 'lower' ? words[ki].t.toLowerCase() : words[ki].t;
+    const drop = after.length && /[gjpqy]/.test(shownKey) ? big * 0.2 : 0;
+    const row = (ws: typeof words, mt = 0) => ws.length ? (
+      <div style={{ display: 'flex', justifyContent: 'center', gap: small * 0.28, height: small * 1.15, alignItems: 'center', marginTop: mt }}>
         {ws.map((w, j) => <span key={j} style={{ ...base, fontSize: small, opacity: shown(now, w.s, fps), ...money(w.t) }}>{w.t}</span>)}
       </div>) : null;
-    const h = (before.length ? small * 1.15 : 0) + big * 1.0 + (after.length ? small * 1.15 : 0);
+    const h = (before.length ? small * 1.15 : 0) + big * 1.0 + (after.length ? small * 1.15 + drop : 0);
     const kp = ki < 0 ? 0 : shown(now, words[ki].s, fps, 4);
     return (
       <div style={box(h || small * 1.2)}>
@@ -84,7 +91,7 @@ export const StyledCaptions: React.FC<{
           <div style={{ height: big, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
             <span style={{ ...base, fontSize: big, color: key, opacity: kp, transform: `scale(${0.82 + 0.18 * ease(kp)})`, ...money(words[ki].t) }}>{words[ki].t}</span>
           </div>) : null}
-        {row(ki < 0 ? rest.slice(0, 0) : after)}
+        {row(ki < 0 ? rest.slice(0, 0) : after, drop)}
       </div>
     );
   }
